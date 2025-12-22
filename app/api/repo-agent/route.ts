@@ -765,3 +765,564 @@ export async function POST(req: Request) {
     const systemPrompt = `${baseSystemPrompt}\n\n═══════════════════════════════════════════════════════════════\nCONTEXT & STATE\n═══════════════════════════════════════════════════════════════\nCurrent Repository: ${currentRepo}\nCurrent Branch: ${currentBranch}\n\n${repoContext}\n\n═══════════════════════════════════════════════════════════════\nACTIVE TODO ITEMS\n═══════════════════════════════════════════════════════════════\n${activeTodos.length > 0 ? activeTodos.map((todo: any) =>
       `• [${todo.status.toUpperCase()}] ${todo.id}: ${todo.title}${todo.description ? ` - ${todo.description}` : ''}`
     ).join('\\n') : 'No active todos'}\n\n═══════════════════════════════════════════════════════════════\nSTAGING & COMMIT WORKFLOW (MANDATORY)\n═══════════════════════════════════════════════════════════════\nYou MUST use the Staging Workflow for ALL code changes:\n\n1. **STAGE**: Use \\`github_stage_change\\` to record changes in memory.\n   - You can stage multiple files in sequence or parallel.\n   - NO changes are applied to GitHub yet.\n\n2. **COMMIT**: Use \\`github_commit_changes\\` to apply ALL staged changes.\n   - This performs the Git Tree operations (Blobs -> Tree -> Commit -> Ref).\n   - Require a SINGLE clear commit message (Conventional Commits format preferred).\n\nDO NOT use \\`github_write_file\\` or \\`github_delete_file\\` for code changes anymore. \nUse them ONLY if specifically asked for direct operations, but prefer Staging.\n\nExample:\nUser: \"Update auth.ts and user.ts\"\nAssistant:\n- github_stage_change(auth.ts, ...)\n- github_stage_change(user.ts, ...)\n- github_commit_changes(\"feat: update auth and user models\")\n`
+
+    // Define GitHub repository tools
+    const tools = {
+      // --- Staging & Commits ---
+      github_stage_change: tool({
+        description: 'Stage a file change (create, update, or delete) in memory. Supports both full rewrites and incremental edits. DOES NOT apply to GitHub immediately.',
+        inputSchema: z.object({
+          path: z.string().describe('File path'),
+          content: z.string().optional().describe('New content (required for create/update in rewrite mode)'),
+          operation: z.enum(['create', 'update', 'delete']).describe('Type of operation'),
+          edit_mode: z.enum(['rewrite', 'incremental']).default('rewrite').describe('How to apply changes: rewrite (provide full content) or incremental (apply specific edits)'),
+          edit_operations: z.array(z.object({
+            old_string: z.string().describe('Text to replace (must be unique within context)'),
+            new_string: z.string().describe('Replacement text'),
+            context_lines: z.number().optional().default(3).describe('Lines of context before/after for uniqueness (3-5 recommended)')
+          })).optional().describe('Incremental edits to apply (only used in incremental mode)'),
+          description: z.string().optional().describe('Brief description of change')
+        }),
+        execute: async ({ path, content, operation, edit_mode = 'rewrite', edit_operations }) => {
+          console.log(`[RepoAgent:${requestId.slice(0, 8)}] 📝 Staging change: ${operation} ${path} (${edit_mode} mode)`)
+
+          try {
+            if (operation === 'delete') {
+              // For delete operations, we don't need content
+              requestStagedChanges.set(path, {
+                operation: 'delete',
+                path,
+                description: edit_operations?.[0]?.description || 'File deletion'
+              })
+              return { success: true, message: `Staged deletion of ${path}` }
+            }
+
+            if (edit_mode === 'incremental' && edit_operations) {
+              // Handle incremental edits
+              const currentContent = await getFileContent(octokit, owner, repo, path, currentBranch)
+              let newContent = currentContent
+
+              for (const edit of edit_operations) {
+                const { old_string, new_string, context_lines = 3 } = edit
+                const contextPattern = escapeRegExp(old_string)
+                const regex = new RegExp(contextPattern, 'g')
+
+                if (!regex.test(newContent)) {
+                  throw new Error(`Could not find exact match for: ${old_string.substring(0, 100)}...`)
+                }
+
+                newContent = newContent.replace(regex, new_string)
+              }
+
+              requestStagedChanges.set(path, {
+                operation: 'update',
+                path,
+                content: newContent,
+                description: edit_operations[0]?.description || 'Incremental file update'
+              })
+              return { success: true, message: `Staged incremental update of ${path}` }
+            } else {
+              // Full rewrite mode
+              if (!content) {
+                throw new Error('Content is required for create/update operations in rewrite mode')
+              }
+
+              requestStagedChanges.set(path, {
+                operation: operation === 'create' ? 'create' : 'update',
+                path,
+                content,
+                description: 'Full file rewrite'
+              })
+              return { success: true, message: `Staged ${operation} of ${path}` }
+            }
+          } catch (error) {
+            console.error(`[RepoAgent:${requestId.slice(0, 8)}] ❌ Staging error for ${path}:`, error)
+            throw error
+          }
+        }
+      }),
+
+      github_commit_changes: tool({
+        description: 'Commit all staged changes to the repository using Git Tree API. Creates a new commit with all staged changes.',
+        inputSchema: z.object({
+          message: z.string().describe('Commit message (Conventional Commits format preferred)'),
+          branch: z.string().optional().describe('Branch to commit to (defaults to current)')
+        }),
+        execute: async ({ message, branch = currentBranch }) => {
+          console.log(`[RepoAgent:${requestId.slice(0, 8)}] 💾 Committing ${requestStagedChanges.size} staged changes to ${branch}`)
+
+          try {
+            if (requestStagedChanges.size === 0) {
+              return { success: false, message: 'No staged changes to commit' }
+            }
+
+            // Get the current commit SHA
+            const refResponse = await octokit.rest.git.getRef({
+              owner,
+              repo,
+              ref: `heads/${branch}`
+            })
+            const currentCommitSha = refResponse.data.object.sha
+
+            // Get the current tree
+            const commitResponse = await octokit.rest.git.getCommit({
+              owner,
+              repo,
+              commit_sha: currentCommitSha
+            })
+            const currentTreeSha = commitResponse.data.tree.sha
+
+            // Create blobs for new/updated files
+            const newTreeItems: any[] = []
+
+            for (const [path, change] of requestStagedChanges) {
+              if (change.operation === 'delete') {
+                // For deletions, we don't add anything to the tree
+                continue
+              }
+
+              const blobResponse = await octokit.rest.git.createBlob({
+                owner,
+                repo,
+                content: Buffer.from(change.content).toString('base64'),
+                encoding: 'base64'
+              })
+
+              newTreeItems.push({
+                path,
+                mode: '100644', // Regular file
+                type: 'blob',
+                sha: blobResponse.data.sha
+              })
+            }
+
+            // Create new tree
+            const treeResponse = await octokit.rest.git.createTree({
+              owner,
+              repo,
+              base_tree: currentTreeSha,
+              tree: newTreeItems
+            })
+
+            // Create commit
+            const newCommitResponse = await octokit.rest.git.createCommit({
+              owner,
+              repo,
+              message,
+              tree: treeResponse.data.sha,
+              parents: [currentCommitSha],
+              author: {
+                name: 'PiPilot SWE Agent',
+                email: userEmail || 'pipilot-swe-agent@github.com'
+              }
+            })
+
+            // Update branch reference
+            await octokit.rest.git.updateRef({
+              owner,
+              repo,
+              ref: `heads/${branch}`,
+              sha: newCommitResponse.data.sha
+            })
+
+            // Clear staged changes
+            requestStagedChanges.clear()
+
+            console.log(`[RepoAgent:${requestId.slice(0, 8)}] ✅ Committed changes to ${branch}: ${newCommitResponse.data.sha}`)
+            return {
+              success: true,
+              message: `Successfully committed ${newTreeItems.length} changes to ${branch}`,
+              commitSha: newCommitResponse.data.sha
+            }
+          } catch (error) {
+            console.error(`[RepoAgent:${requestId.slice(0, 8)}] ❌ Commit error:`, error)
+            throw error
+          }
+        }
+      }),
+
+      // --- File Operations ---
+      github_read_file: tool({
+        description: 'Read the contents of a file from the repository',
+        inputSchema: z.object({
+          path: z.string().describe('File path in repository'),
+          branch: z.string().optional().describe('Branch name, defaults to current')
+        }),
+        execute: async ({ path, branch = currentBranch }) => {
+          console.log(`[RepoAgent:${requestId.slice(0, 8)}] 📖 Reading file: ${path}`)
+
+          try {
+            const content = await getFileContent(octokit, owner, repo, path, branch)
+            return {
+              success: true,
+              path,
+              content,
+              size: content.length,
+              language: detectLanguage(path, content)
+            }
+          } catch (error) {
+            console.error(`[RepoAgent:${requestId.slice(0, 8)}] ❌ Read error for ${path}:`, error)
+            throw error
+          }
+        }
+      }),
+
+      github_write_file: tool({
+        description: 'Create or update a file in the repository (direct operation - use staging for changes)',
+        inputSchema: z.object({
+          path: z.string().describe('File path'),
+          content: z.string().describe('File content'),
+          message: z.string().describe('Commit message'),
+          branch: z.string().optional().describe('Branch name')
+        }),
+        execute: async ({ path, content, message, branch = currentBranch }) => {
+          console.log(`[RepoAgent:${requestId.slice(0, 8)}] ✏️ Writing file: ${path}`)
+
+          try {
+            await octokit.rest.repos.createOrUpdateFileContents({
+              owner,
+              repo,
+              path,
+              message,
+              content: Buffer.from(content).toString('base64'),
+              branch,
+              author: {
+                name: 'PiPilot SWE Agent',
+                email: userEmail || 'pipilot-swe-agent@github.com'
+              }
+            })
+
+            return { success: true, message: `File ${path} created/updated successfully` }
+          } catch (error) {
+            console.error(`[RepoAgent:${requestId.slice(0, 8)}] ❌ Write error for ${path}:`, error)
+            throw error
+          }
+        }
+      }),
+
+      github_delete_file: tool({
+        description: 'Delete a file from the repository (direct operation - use staging for changes)',
+        inputSchema: z.object({
+          path: z.string().describe('File path'),
+          message: z.string().describe('Commit message'),
+          branch: z.string().optional().describe('Branch name')
+        }),
+        execute: async ({ path, message, branch = currentBranch }) => {
+          console.log(`[RepoAgent:${requestId.slice(0, 8)}] 🗑️ Deleting file: ${path}`)
+
+          try {
+            // Get current file SHA
+            const fileResponse = await octokit.rest.repos.getContent({
+              owner,
+              repo,
+              path,
+              ref: branch
+            })
+
+            await octokit.rest.repos.deleteFile({
+              owner,
+              repo,
+              path,
+              message,
+              sha: (fileResponse.data as any).sha,
+              branch,
+              author: {
+                name: 'PiPilot SWE Agent',
+                email: userEmail || 'pipilot-swe-agent@github.com'
+              }
+            })
+
+            return { success: true, message: `File ${path} deleted successfully` }
+          } catch (error) {
+            console.error(`[RepoAgent:${requestId.slice(0, 8)}] ❌ Delete error for ${path}:`, error)
+            throw error
+          }
+        }
+      }),
+
+      github_list_files: tool({
+        description: 'Browse repository directory structure',
+        inputSchema: z.object({
+          path: z.string().optional().describe('Directory path, empty for root'),
+          branch: z.string().optional().describe('Branch name')
+        }),
+        execute: async ({ path = '', branch = currentBranch }) => {
+          console.log(`[RepoAgent:${requestId.slice(0, 8)}] 📁 Listing files in: ${path || 'root'}`)
+
+          try {
+            const response = await octokit.rest.repos.getContent({
+              owner,
+              repo,
+              path,
+              ref: branch
+            })
+
+            const items = Array.isArray(response.data) ? response.data : [response.data]
+            const files = items.map((item: any) => ({
+              name: item.name,
+              path: item.path,
+              type: item.type,
+              size: item.size,
+              download_url: item.download_url
+            }))
+
+            return {
+              success: true,
+              path: path || '/',
+              files,
+              count: files.length
+            }
+          } catch (error) {
+            console.error(`[RepoAgent:${requestId.slice(0, 8)}] ❌ List error for ${path}:`, error)
+            throw error
+          }
+        }
+      }),
+
+      // --- Repository Operations ---
+      github_create_branch: tool({
+        description: 'Create a new branch in the repository',
+        inputSchema: z.object({
+          branch: z.string().describe('New branch name'),
+          source_branch: z.string().optional().describe('Source branch, defaults to current')
+        }),
+        execute: async ({ branch, source_branch = currentBranch }) => {
+          console.log(`[RepoAgent:${requestId.slice(0, 8)}] 🌿 Creating branch: ${branch} from ${source_branch}`)
+
+          try {
+            // Get source branch SHA
+            const refResponse = await octokit.rest.git.getRef({
+              owner,
+              repo,
+              ref: `heads/${source_branch}`
+            })
+
+            await octokit.rest.git.createRef({
+              owner,
+              repo,
+              ref: `refs/heads/${branch}`,
+              sha: refResponse.data.object.sha
+            })
+
+            return { success: true, message: `Branch ${branch} created successfully` }
+          } catch (error) {
+            console.error(`[RepoAgent:${requestId.slice(0, 8)}] ❌ Branch creation error:`, error)
+            throw error
+          }
+        }
+      }),
+
+      github_create_pull_request: tool({
+        description: 'Create a pull request between branches',
+        inputSchema: z.object({
+          title: z.string().describe('Pull request title'),
+          head: z.string().describe('Head branch (source)'),
+          base: z.string().describe('Base branch (target)'),
+          body: z.string().optional().describe('Pull request description'),
+          draft: z.boolean().optional().describe('Create as draft PR')
+        }),
+        execute: async ({ title, head, base, body, draft = false }) => {
+          console.log(`[RepoAgent:${requestId.slice(0, 8)}] 🔄 Creating PR: ${head} -> ${base}`)
+
+          try {
+            const prResponse = await octokit.rest.pulls.create({
+              owner,
+              repo,
+              title,
+              head,
+              base,
+              body,
+              draft
+            })
+
+            return {
+              success: true,
+              message: `Pull request #${prResponse.data.number} created successfully`,
+              prNumber: prResponse.data.number,
+              url: prResponse.data.html_url
+            }
+          } catch (error) {
+            console.error(`[RepoAgent:${requestId.slice(0, 8)}] ❌ PR creation error:`, error)
+            throw error
+          }
+        }
+      }),
+
+      // --- Search Operations ---
+      github_search_code: tool({
+        description: 'Search for code patterns in the repository',
+        inputSchema: z.object({
+          query: z.string().describe('Search query'),
+          path: z.string().optional().describe('Limit search to specific path'),
+          extension: z.string().optional().describe('File extension filter')
+        }),
+        execute: async ({ query, path, extension }) => {
+          console.log(`[RepoAgent:${requestId.slice(0, 8)}] 🔍 Searching code for: ${query}`)
+
+          try {
+            const searchQuery = `repo:${owner}/${repo} ${query}${path ? ` path:${path}` : ''}${extension ? ` extension:${extension}` : ''}`
+
+            const response = await octokit.rest.search.code({
+              q: searchQuery,
+              per_page: 10
+            })
+
+            const results = response.data.items.map((item: any) => ({
+              name: item.name,
+              path: item.path,
+              html_url: item.html_url,
+              repository: item.repository.full_name
+            }))
+
+            return {
+              success: true,
+              query,
+              results,
+              count: results.length
+            }
+          } catch (error) {
+            console.error(`[RepoAgent:${requestId.slice(0, 8)}] ❌ Search error:`, error)
+            throw error
+          }
+        }
+      }),
+
+      github_grep_search: tool({
+        description: 'Advanced grep-style search in repository files',
+        inputSchema: z.object({
+          query: z.string().describe('Search pattern'),
+          path: z.string().optional().describe('Limit to path'),
+          case_insensitive: z.boolean().optional().default(false).describe('Case insensitive search')
+        }),
+        execute: async ({ query, path, case_insensitive = false }) => {
+          console.log(`[RepoAgent:${requestId.slice(0, 8)}] 🔍 Grep searching for: ${query}`)
+
+          try {
+            // Use GitHub's code search API with regex-like patterns
+            const searchQuery = `repo:${owner}/${repo} ${query}${path ? ` path:${path}` : ''}`
+
+            const response = await octokit.rest.search.code({
+              q: searchQuery,
+              per_page: 20
+            })
+
+            const results = response.data.items.map((item: any) => ({
+              path: item.path,
+              matches: [{
+                line: 1, // GitHub doesn't provide line numbers in search
+                content: item.text_matches?.[0]?.fragment || 'Match found'
+              }]
+            }))
+
+            return {
+              success: true,
+              query,
+              results,
+              count: results.length
+            }
+          } catch (error) {
+            console.error(`[RepoAgent:${requestId.slice(0, 8)}] ❌ Grep search error:`, error)
+            throw error
+          }
+        }
+      }),
+
+      // --- Web Search ---
+      web_search: tool({
+        description: 'Search the web for documentation and current information',
+        inputSchema: z.object({
+          query: z.string().describe('Search query')
+        }),
+        execute: async ({ query }) => {
+          console.log(`[RepoAgent:${requestId.slice(0, 8)}] 🌐 Web search for: ${query}`)
+
+          try {
+            const result = await searchWeb(query)
+            return result
+          } catch (error) {
+            console.error(`[RepoAgent:${requestId.slice(0, 8)}] ❌ Web search error:`, error)
+            throw error
+          }
+        }
+      }),
+
+      // --- Todo Management ---
+      github_create_todo: tool({
+        description: 'Create a new todo item to track progress on tasks',
+        inputSchema: z.object({
+          id: z.string().describe('Unique identifier'),
+          title: z.string().describe('Todo title/summary'),
+          description: z.string().optional().describe('Detailed description'),
+          status: z.enum(['pending', 'completed']).default('pending').describe('Initial status')
+        }),
+        execute: async ({ id, title, description, status = 'pending' }) => {
+          console.log(`[RepoAgent:${requestId.slice(0, 8)}] 📝 Creating todo: ${id}`)
+
+          const newTodo = {
+            id,
+            title,
+            description: description || '',
+            status,
+            created_at: new Date().toISOString()
+          }
+
+          activeTodos.push(newTodo)
+
+          return {
+            success: true,
+            message: `Todo "${title}" created with ID: ${id}`,
+            todo: newTodo
+          }
+        }
+      }),
+
+      github_update_todo: tool({
+        description: 'Update an existing todo item',
+        inputSchema: z.object({
+          id: z.string().describe('Todo ID to update'),
+          title: z.string().optional().describe('New title'),
+          description: z.string().optional().describe('New description'),
+          status: z.enum(['pending', 'completed']).optional().describe('New status')
+        }),
+        execute: async ({ id, title, description, status }) => {
+          console.log(`[RepoAgent:${requestId.slice(0, 8)}] 📝 Updating todo: ${id}`)
+
+          const todoIndex = activeTodos.findIndex((t: any) => t.id === id)
+          if (todoIndex === -1) {
+            throw new Error(`Todo with ID ${id} not found`)
+          }
+
+          if (title !== undefined) activeTodos[todoIndex].title = title
+          if (description !== undefined) activeTodos[todoIndex].description = description
+          if (status !== undefined) activeTodos[todoIndex].status = status
+
+          return {
+            success: true,
+            message: `Todo ${id} updated successfully`,
+            todo: activeTodos[todoIndex]
+          }
+        }
+      }),
+
+      github_delete_todo: tool({
+        description: 'Delete a todo item',
+        inputSchema: z.object({
+          id: z.string().describe('Todo ID to delete')
+        }),
+        execute: async ({ id }) => {
+          console.log(`[RepoAgent:${requestId.slice(0, 8)}] 🗑️ Deleting todo: ${id}`)
+
+          const initialLength = activeTodos.length
+          activeTodos = activeTodos.filter((t: any) => t.id !== id)
+
+          if (activeTodos.length === initialLength) {
+            throw new Error(`Todo with ID ${id} not found`)
+          }
+
+          return {
+            success: true,
+            message: `Todo ${id} deleted successfully`
+          }
+        }
+      })
+    }
