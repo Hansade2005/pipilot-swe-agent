@@ -473,3 +473,138 @@ const findSemanticMatches = (content: string, query: string): any[] => {
 const escapeRegExp = (string: string): string => {
   return string.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&')
 }
+
+// Function to import GitHub repository and store in session memory
+const importGithubRepoForSession = async (repoUrl: string, repoKey: string, octokit: any, ref: string = 'HEAD') => {
+  console.log(`[RepoAgent] 🚀 Importing GitHub repository for session: ${repoUrl}`)
+
+  try {
+    // Parse repo URL to get owner and repo
+    const repoUrlMatch = repoUrl.match(/github\\.com\\/([^\\/]+)\\/([^\\/]+)/)
+    if (!repoUrlMatch) {
+      throw new Error('Invalid GitHub repository URL')
+    }
+    const [, owner, repo] = repoUrlMatch
+    const repoName = `${owner}-${repo}`
+
+    // Download repository archive directly using Octokit (works for private repos)
+    console.log(`[RepoAgent] 📦 Downloading repository archive for ${owner}/${repo} at ref ${ref}`)
+    const archiveResponse = await octokit.rest.repos.downloadZipballArchive({
+      owner,
+      repo,
+      ref: ref // Use specified ref
+    })
+
+    // Handle the binary data correctly - Octokit returns data as Buffer/ArrayBuffer
+    // Convert to ArrayBuffer if it's not already, then create proper Blob
+    let arrayBuffer: ArrayBuffer
+
+    if (archiveResponse.data instanceof ArrayBuffer) {
+      arrayBuffer = archiveResponse.data
+    } else if (Buffer.isBuffer(archiveResponse.data)) {
+      arrayBuffer = archiveResponse.data.buffer.slice(
+        archiveResponse.data.byteOffset,
+        archiveResponse.data.byteOffset + archiveResponse.data.byteLength
+      )
+    } else if (archiveResponse.data instanceof Uint8Array) {
+      arrayBuffer = archiveResponse.data.buffer
+    } else {
+      // Fallback: try to convert from base64 if it's a string
+      const dataStr = archiveResponse.data.toString()
+      if (typeof dataStr === 'string' && /^[A-Za-z0-9+/]*={0,2}$/.test(dataStr)) {
+        arrayBuffer = Uint8Array.from(atob(dataStr), c => c.charCodeAt(0)).buffer
+      } else {
+        throw new Error('Unable to convert archive data to ArrayBuffer')
+      }
+    }
+
+    // Create blob from ArrayBuffer (same as chat-input pattern)
+    const zipBlob = new Blob([arrayBuffer], {
+      type: 'application/zip'
+    })
+
+    const zip = await JSZip.loadAsync(zipBlob)
+    const filesToCreate: Array<{ path: string; content: string }> = []
+
+    // Process each file in the zip
+    for (const [path, zipEntry] of Object.entries(zip.files)) {
+      const entry = zipEntry as any
+      if (entry.dir) continue // Skip directories
+
+      // Remove the repo name prefix from path (e.g., "repo-name-main/" -> "")
+      const cleanPath = path.replace(`${repoName}-main/`, '').replace(`${repoName}-master/`, '')
+
+      if (!cleanPath || cleanPath.startsWith('.') || cleanPath.includes('/.git/')) continue
+
+      try {
+        const content = await entry.async('text')
+        filesToCreate.push({
+          path: cleanPath,
+          content: content
+        })
+      } catch (error) {
+        console.warn(`⚠️ Could not extract text content for ${cleanPath}:`, error)
+      }
+    }
+
+    // Filter out unwanted files (similar to chat-input.tsx)
+    const filterUnwantedFiles = (files: Array<{ path: string; content: string }>) => {
+      return files.filter(file => {
+        const path = file.path.toLowerCase()
+        // Skip images, videos, PDFs, and other binary files
+        if (path.endsWith('.jpg') || path.endsWith('.jpeg') || path.endsWith('.png') ||
+            path.endsWith('.gif') || path.endsWith('.bmp') || path.endsWith('.webp') ||
+            path.endsWith('.svg') || path.endsWith('.ico') || path.endsWith('.mp4') ||
+            path.endsWith('.avi') || path.endsWith('.mov') || path.endsWith('.wmv') ||
+            path.endsWith('.pdf') || path.endsWith('.zip') || path.endsWith('.tar') ||
+            path.endsWith('.gz') || path.endsWith('.rar') || path.endsWith('.7z')) {
+          return false
+        }
+        // Skip certain folders
+        if (path.includes('/.git/') || path.includes('/node_modules/') || path.includes('/.next/') ||
+            path.includes('/dist/') || path.includes('/build/') || path.includes('/scripts/') ||
+            path.includes('/test') || path.includes('/tests/') || path.includes('/__tests__/') ||
+            path.includes('/coverage/')) {
+          return false
+        }
+        return true
+      })
+    }
+
+    const filteredFiles = filterUnwantedFiles(filesToCreate)
+    console.log(`[RepoAgent] 📦 Extracted ${filteredFiles.length} files from ${repoName}`)
+
+    // Convert to session storage format (like chat-v2)
+    const sessionFiles = new Map<string, any>()
+    const fileTree: string[] = []
+
+    for (const file of filteredFiles) {
+      const fileData = {
+        path: file.path,
+        content: file.content,
+        name: file.path.split('/').pop() || file.path,
+        fileType: file.path.split('.').pop() || 'text',
+        type: file.path.split('.').pop() || 'text',
+        size: file.content.length,
+        isDirectory: false,
+        folderId: undefined,
+        metadata: {}
+      }
+      sessionFiles.set(file.path, fileData)
+      fileTree.push(file.path)
+    }
+
+    // Store in session memory
+    repoSessionStorage.set(repoKey, {
+      fileTree,
+      files: sessionFiles
+    })
+
+    console.log(`[RepoAgent] ✅ Stored ${sessionFiles.size} files in session memory for ${repoKey}`)
+    return { success: true, fileCount: sessionFiles.size }
+
+  } catch (error) {
+    console.error('[RepoAgent] ❌ Failed to import GitHub repository:', error)
+    throw error
+  }
+}
