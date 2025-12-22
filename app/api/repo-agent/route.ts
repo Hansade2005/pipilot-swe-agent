@@ -608,3 +608,160 @@ const importGithubRepoForSession = async (repoUrl: string, repoKey: string, octo
     throw error
   }
 }
+
+export async function POST(req: Request) {
+  let requestId = crypto.randomUUID()
+  let startTime = Date.now()
+  let installationId: number | null = null
+
+  // Declare variables at function scope for error handling access
+  let modelId: string | undefined
+  let messages: any[] | undefined
+  let currentRepo: string | undefined
+  let currentBranch: string = 'main'
+  let githubToken: string | undefined
+
+  console.log(`[RepoAgent:${requestId.slice(0, 8)}] 🚀 Incoming POST request at ${new Date().toISOString()}`)
+
+  try {
+    // ===========================================================================
+    // GITHUB APP AUTHENTICATION - Verify webhook and get installation token
+    // ===========================================================================
+    const headers = req.headers
+    const signature = headers.get('x-hub-signature-256')
+    const event = headers.get('x-github-event')
+    const delivery = headers.get('x-github-delivery')
+
+    // For GitHub App webhooks, we need to verify the signature
+    if (signature && event) {
+      // This is a webhook request - verify signature
+      const body = await req.text()
+      const isValidSignature = await verifyWebhookSignature(body, signature)
+
+      if (!isValidSignature) {
+        console.error('[RepoAgent] ❌ Invalid webhook signature')
+        return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
+      }
+
+      // Parse webhook payload
+      const payload = JSON.parse(body)
+
+      // For installation events, we might need to handle installation setup
+      if (event === 'installation' || event === 'installation_repositories') {
+        installationId = payload.installation.id
+        console.log(`[RepoAgent] 📦 Webhook event: ${event}, Installation ID: ${installationId}`)
+      }
+
+      // For issue_comment or pull_request events, extract installation ID
+      if (payload.installation) {
+        installationId = payload.installation.id
+      }
+
+      // Reconstruct request for further processing
+      req = new Request(req.url, {
+        method: req.method,
+        headers: req.headers,
+        body: body
+      })
+    } else {
+      // This is a direct API call - extract installation ID from request body
+      const body = await req.json()
+      installationId = body.installationId
+
+      // Reconstruct request
+      req = new Request(req.url, {
+        method: req.method,
+        headers: req.headers,
+        body: JSON.stringify(body)
+      })
+    }
+
+    if (!installationId) {
+      console.error('[RepoAgent] ❌ No installation ID provided')
+      return NextResponse.json({ error: 'Installation ID required' }, { status: 400 })
+    }
+
+    // Get installation access token
+    const installationToken = await getInstallationToken(installationId)
+    console.log(`[RepoAgent:${requestId.slice(0, 8)}] ✅ Got installation token for installation ${installationId}`)
+
+    // Parse request body
+    const body = await req.json()
+    console.log(`[RepoAgent:${requestId.slice(0, 8)}] 📝 Request body received:`, {
+      messages: body.messages?.length || 0,
+      repo: body.repo,
+      branch: body.branch || 'main',
+      modelId: body.modelId || 'claude-3-5-sonnet-20241022',
+      lastMessagePreview: body.messages?.[body.messages.length - 1]?.content?.substring(0, 100) || 'N/A'
+    })
+
+    // Extract parameters
+    ;({
+      messages,
+      modelId,
+      repo: currentRepo,
+      branch: currentBranch = 'main',
+      githubToken
+    } = body)
+
+    // Use installation token if no specific token provided
+    if (!githubToken) {
+      githubToken = installationToken
+    }
+
+    // Extract todos from request body
+    let todos = body.todos || []
+
+    if (!messages || !Array.isArray(messages)) {
+      console.error(`[RepoAgent:${requestId.slice(0, 8)}] ❌ Invalid request: Messages array is required`)
+      return NextResponse.json({ error: 'Messages array is required' }, { status: 400 })
+    }
+
+    if (!currentRepo) {
+      console.error(`[RepoAgent:${requestId.slice(0, 8)}] ❌ Invalid request: Repository is required`)
+      return NextResponse.json({ error: 'Repository is required' }, { status: 400 })
+    }
+
+    if (!githubToken) {
+      console.error(`[RepoAgent:${requestId.slice(0, 8)}] ❌ Invalid request: GitHub token is required`)
+      return NextResponse.json({ error: 'GitHub token is required' }, { status: 400 })
+    }
+
+    // Ensure todos is properly typed
+    const activeTodos = Array.isArray(todos) ? todos : []
+    console.log(`[RepoAgent:${requestId.slice(0, 8)}] 📋 Active todos: ${activeTodos.length}`)
+
+    console.log(`[RepoAgent:${requestId.slice(0, 8)}] ✅ Request validation passed - Repo: ${currentRepo}, Branch: ${currentBranch}, Model: ${modelId}`)
+
+    // Initialize Octokit client
+    const octokit = createOctokitClient(githubToken)
+
+    // Get authenticated user's email for commits (will be the GitHub App)
+    const userEmail = await getUserEmail(octokit)
+
+    // Verify repository access
+    try {
+      const { owner, repo } = parseRepoString(currentRepo)
+      await octokit.rest.repos.get({ owner, repo })
+    } catch (error) {
+      console.error('[RepoAgent] Repository access verification failed:', error)
+      return NextResponse.json({
+        error: 'Cannot access the specified repository. Please check your permissions and repository name.'
+      }, { status: 403 })
+    }
+
+    // Initialize request-scoped staging storage
+    const requestStagedChanges = new Map<string, any>()
+
+    // Get optimized context
+    const { owner, repo } = parseRepoString(currentRepo)
+    const repoContext = await getOptimizedFileContext(octokit, owner, repo, currentBranch)
+
+    // Get AI model
+    const model = getAIModel(modelId)
+    const baseSystemPrompt = getRepoAgentSystemPrompt(modelId || 'claude-3-5-sonnet-20241022')
+
+    // Enhanced System Prompt
+    const systemPrompt = `${baseSystemPrompt}\n\n═══════════════════════════════════════════════════════════════\nCONTEXT & STATE\n═══════════════════════════════════════════════════════════════\nCurrent Repository: ${currentRepo}\nCurrent Branch: ${currentBranch}\n\n${repoContext}\n\n═══════════════════════════════════════════════════════════════\nACTIVE TODO ITEMS\n═══════════════════════════════════════════════════════════════\n${activeTodos.length > 0 ? activeTodos.map((todo: any) =>
+      `• [${todo.status.toUpperCase()}] ${todo.id}: ${todo.title}${todo.description ? ` - ${todo.description}` : ''}`
+    ).join('\\n') : 'No active todos'}\n\n═══════════════════════════════════════════════════════════════\nSTAGING & COMMIT WORKFLOW (MANDATORY)\n═══════════════════════════════════════════════════════════════\nYou MUST use the Staging Workflow for ALL code changes:\n\n1. **STAGE**: Use \\`github_stage_change\\` to record changes in memory.\n   - You can stage multiple files in sequence or parallel.\n   - NO changes are applied to GitHub yet.\n\n2. **COMMIT**: Use \\`github_commit_changes\\` to apply ALL staged changes.\n   - This performs the Git Tree operations (Blobs -> Tree -> Commit -> Ref).\n   - Require a SINGLE clear commit message (Conventional Commits format preferred).\n\nDO NOT use \\`github_write_file\\` or \\`github_delete_file\\` for code changes anymore. \nUse them ONLY if specifically asked for direct operations, but prefer Staging.\n\nExample:\nUser: \"Update auth.ts and user.ts\"\nAssistant:\n- github_stage_change(auth.ts, ...)\n- github_stage_change(user.ts, ...)\n- github_commit_changes(\"feat: update auth and user models\")\n`
