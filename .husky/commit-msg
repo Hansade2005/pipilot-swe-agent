@@ -1,0 +1,1 @@
+commitlint --verbose --edit "${1}"
