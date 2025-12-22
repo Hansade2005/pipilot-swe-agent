@@ -1,196 +1,92 @@
-# Next.js React Web Project Template
+# PiPilot SWE Agent - GitHub App
 
-A production-grade Next.js starter template designed for building scalable enterprise applications. Combines modern development practices with battle-tested tooling and utilities.
+An autonomous software engineering agent that operates as a GitHub App, capable of reading, writing, and managing repository code through natural language commands.
 
-[![Next.js](https://img.shields.io/badge/Next.js-14-black.svg)](https://nextjs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue.svg)](https://www.typescriptlang.org/)
-[![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3.4-38B2AC.svg)](https://tailwindcss.com)
+## Features
 
-## Why This Template?
+- 🤖 **Autonomous Code Operations**: Read, create, edit, and delete files
+- 🔍 **Advanced Code Search**: Text, semantic, and regex search capabilities
+- 🌐 **Web Research**: Search documentation and external resources
+- 📝 **Pull Request Management**: Create branches, commits, and PRs safely
+- 🔧 **CI/CD Awareness**: Monitor workflows and fix build failures
+- 💬 **Natural Language Interface**: Respond to @mentions in issues and PRs
+- 🛡️ **Safety First**: Never touches protected branches or sensitive files
 
-- 🏢 **Enterprise-Ready**: Built with scalability and maintainability in mind
-- 🔒 **Type-Safe**: Comprehensive TypeScript setup with strict mode
-- 🚀 **Performance-First**: Optimized for Core Web Vitals
-- 📱 **Full-Stack Features**: From API layer to UI components
-- 🛠️ **Developer Experience**: Extensive tooling and utilities included
+## Quick Setup
 
-## Key Features
+### 1. Create GitHub App
 
-### Core Framework
+1. Go to [GitHub Settings > Developer settings > GitHub Apps](https://github.com/settings/apps)
+2. Click "New GitHub App"
+3. Use the `github-app-manifest.json` file in this repository as a template
+4. **Important**: Update the webhook URL to point to your deployed instance
 
-- ⚡️ Next.js 14 with App Router and React Server Components
-- 🎯 TypeScript with strict mode
-- 🎨 TailwindCSS with advanced features:
-  - Automatic class merging with tailwind-merge
-  - Class sorting with prettier-plugin-tailwindcss
-  - Container queries and form plugins
-- 🎭 Dark mode support with next-themes
+### 2. Configure Environment Variables
 
-### State & Data Management
-
-- 📡 TanStack Query v5 with devtools
-- 🔄 Jotai for atomic state management
-- 📝 React Hook Form with validation
-- 🔍 Zod schema validation
-
-### Developer Experience
-
-- 📚 Storybook 8 with Next.js integration
-- 🎯 ESLint & Prettier with custom rules
-- 🔒 Git hooks with Husky
-- 📏 Conventional commits enforcement
-- 🐳 Docker support with standalone output
-
-### Production Features
-
-- 🌍 Advanced i18n with next-international
-- 🔍 SEO optimization with next-seo
-- 🗺️ Automatic sitemap generation
-- 📱 PWA configuration and assets
-- 🖼️ SVGR for SVG as components
-- 🎯 Comprehensive error handling
-- 🚀 Performance optimizations
-
-### Additional Utilities & Helpers
-
-- 🛡️ Flicker-resistant and error-handling Image component
-- 🎯 RSC (React Server Component) utilities and type-safe helpers
-- 📊 SEO utilities for dynamic metadata generation
-- 🔄 Custom hooks for common patterns
-- 🎨 Advanced Tailwind utilities and components
-- 🚀 Performance optimization helpers
-- 📱 Responsive design utilities
-- 🔍 Type-safe API layer setup
-- 🎭 Advanced error boundary configurations
-
-## Quick Start
-
-Start using this template with [Create Next App](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+Copy the values from your GitHub App settings:
 
 ```bash
-pnpm dlx create-next-app -e https://github.com/ouedyan/nextjs-template
+# Required environment variables
+GITHUB_APP_ID=your_app_id_here
+GITHUB_PRIVATE_KEY="-----BEGIN RSA PRIVATE KEY-----\nyour_private_key_here\n-----END RSA PRIVATE KEY-----"
+GITHUB_WEBHOOK_SECRET=your_webhook_secret_here
+GITHUB_CLIENT_ID=your_client_id_here
+GITHUB_CLIENT_SECRET=your_client_secret_here
 ```
 
-Then search for "TODO" comments to complete project setup.
-You can delete this README and use the simplified README.prod instead in your project.
+### 3. Install the App
 
-## Scripts
+Install the app on repositories where you want the agent to operate.
 
-Run the development server
+## Usage
+
+Mention the bot in issues, PR comments, or PR descriptions:
+
+```
+@pipilot-swe-agent explain this function
+@pipilot-swe-agent fix this bug
+@pipilot-swe-agent search for authentication code
+@pipilot-swe-agent create a new API endpoint for users
+```
+
+## Architecture
+
+- **GitHub App Integration**: JWT-based authentication with installation tokens
+- **Webhook-Driven**: Responds to GitHub events (issues, PRs, CI failures)
+- **Safe Operations**: All changes go through PRs, never direct pushes to main
+- **Extensible LLM**: Claude-powered agent with comprehensive tool suite
+
+## API Endpoints
+
+- `POST /api/webhooks/github` - Webhook handler for GitHub events
+- `POST /api/repo-agent` - Direct agent API (requires installation ID)
+
+## Development
 
 ```bash
+# Install dependencies
+pnpm install
+
+# Start development server
 pnpm dev
-```
 
-Building for production
+# Run tests
+pnpm test
 
-```bash
+# Build for production
 pnpm build
 ```
 
-Run in production mode
+## Security
 
-```bash
-pnpm start
-```
+- ✅ Webhook signature verification
+- ✅ Installation-scoped access tokens
+- ✅ No direct access to sensitive files (.env, secrets)
+- ✅ Branch protection respected
+- ✅ All changes require PR approval
 
-Run Storybook server
+---
 
-```bash
-pnpm storybook
-```
+# Original Template Documentation
 
-Build Storybook as a static web application
-
-```bash
-pnpm build-storybook
-```
-
-## Project directory structure
-
-The template follows a modular architecture with clear separation of concerns:
-
-Main folder structure
-
-```
-📂 app
-  📂 [locale]
-    ...📂 {path}
-      📄 page.client.tsx
-      📄 page.tsx
-    📄 page.client.tsx
-    📄 page.tsx
-    📄 layout.tsx
-    📄 error.tsx
-
-  📂 api
-    📂 test
-      📄 route.ts
-    ...📂 {other-apis}
-
-  📄 actions.ts
-  📄 layout.tsx
-  📄 not-found.tsx
-  📄 error.tsx
-  📄 global-error.tsx
-  📄 providers.tsx
-
-📂 components
-  📂 common
-  📂 layout
-  📂 hooks
-  📄 utils.ts
-  ...📄 {Component}.tsx
-  ...📂 {page}
-     ...📄 {Component}.tsx
-
-📂 lib
-  📂 data
-    ...📄 {service}.ts
-  📂 types
-    ...📄 {type}.ts
-  📂 utils
-    ...📄 {context}.ts
-
-📂 public
-  📂 favicons
-  📂 icons
-  📂 images
-
-📂 stories
-  📂 examples
-  ...📄 {Component}.stories.tsx
-  ...📂 {page}
-     ...📄 {Component}.stories.tsx
-
-📂 styles
-  📄 globals.scss
-
-📂 i18n
-  📂 locales
-    ...📂 {locale}
-      📄 common.json
-      ...📄 {namespace}.json
-  📄 client.ts
-  📄 server.ts
-  📄 utils.ts
-```
-
-## Project's main tech stack useful resources
-
-### React
-
-- [React Documentation](https://react.dev) - Official React documentation
-- [W3Schools React tutorial](https://www.w3schools.com/react) - Step-by-step guide to learning React.
-
-### Next.js
-
-- [Learn Next.js](https://nextjs.org/learn) - Interactive Next.js tutorial, the best way to start with next.js if you are new.
-- [Next.js Documentation](https://nextjs.org/docs) - Features and API reference
-
-### Tooling
-
-- [TanStack Query](https://tanstack.com/query/latest) - Data fetching & caching
-- [Jotai Documentation](https://jotai.org) - Atomic state management
-- [Tailwind CSS](https://tailwindcss.com/docs) - Utility-first CSS
-- [TypeScript Handbook](https://www.typescriptlang.org/docs) - TypeScript guide
+A production-grade Next.js starter template designed for building scalable enterprise applications. Combines modern development practices with battle-tested tooling and utilities.
