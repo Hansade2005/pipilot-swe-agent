@@ -340,3 +340,136 @@ const createOctokitClient = (token: string) => {
     auth: token,
   })
 }
+
+const getUserEmail = async (octokit: Octokit) => {
+  try {
+    const emails = await octokit.users.listEmailsForAuthenticatedUser()
+    const primaryEmail = emails.data.find(email => email.primary && email.verified)
+    return primaryEmail ? primaryEmail.email : null
+  } catch (error) {
+    console.error('Failed to get user email:', error)
+    return null
+  }
+}
+
+const parseRepoString = (repoString: string) => {
+  const [owner, repo] = repoString.split('/')
+  return { owner, repo }
+}
+
+// Advanced tool helper functions
+const buildSemanticSearchTerms = (query: string): string => {
+  const lowerQuery = query.toLowerCase()
+
+  // Map natural language to code patterns
+  const semanticMappings: Record<string, string[]> = {
+    'react component': ['function.*Component', 'const.*=.*\\(', 'export.*function', 'export.*const'],
+    'api endpoint': ['router\\.\\.', 'app\\.\\.', 'Route', '@app\\.\\route', 'def.*api', 'func.*handler'],
+    'error handling': ['try.*catch', 'except', 'rescue', 'catch.*Error', 'throw', 'raise'],
+    'database model': ['class.*Model', 'interface.*Model', 'type.*Model', 'Schema', 'model\\('],
+    'test file': ['describe\\(', 'it\\(', 'test\\(', 'spec', '\\.test\\.', '\\.spec\\.'],
+    'configuration': ['config', 'settings', 'env', 'Config', 'Settings'],
+    'utility function': ['export.*function', 'export.*const', 'util', 'helper', 'Utils'],
+    'hook': ['use[A-Z]', 'useState', 'useEffect', 'useCallback', 'useMemo'],
+    'middleware': ['middleware', 'Middleware', 'next\\(', 'req.*res'],
+    'validation': ['validate', 'schema', 'zod', 'yup', 'joi', 'Validate']
+  }
+
+  const terms = []
+  for (const [key, patterns] of Object.entries(semanticMappings)) {
+    if (lowerQuery.includes(key)) {
+      terms.push(...patterns)
+    }
+  }
+
+  // Add the original query if no semantic matches
+  if (terms.length === 0) {
+    terms.push(query)
+  }
+
+  return terms.join(' OR ')
+}
+
+const detectLanguage = (filePath: string, content: string): string => {
+  const ext = filePath.split('.').pop()?.toLowerCase()
+
+  const languageMap: Record<string, string> = {
+    'js': 'JavaScript',
+    'jsx': 'JavaScript React',
+    'ts': 'TypeScript',
+    'tsx': 'TypeScript React',
+    'py': 'Python',
+    'java': 'Java',
+    'cpp': 'C++',
+    'c': 'C',
+    'cs': 'C#',
+    'php': 'PHP',
+    'rb': 'Ruby',
+    'go': 'Go',
+    'rs': 'Rust',
+    'swift': 'Swift',
+    'kt': 'Kotlin',
+    'scala': 'Scala',
+    'html': 'HTML',
+    'css': 'CSS',
+    'scss': 'SCSS',
+    'sass': 'Sass',
+    'less': 'Less',
+    'json': 'JSON',
+    'xml': 'XML',
+    'yaml': 'YAML',
+    'yml': 'YAML',
+    'md': 'Markdown',
+    'sh': 'Shell',
+    'bash': 'Bash',
+    'sql': 'SQL'
+  }
+
+  return languageMap[ext || ''] || 'Unknown'
+}
+
+const getRelevantExcerpt = (content: string, query: string, lines: number): string => {
+  const contentLines = content.split('\\n')
+  const lowerQuery = query.toLowerCase()
+
+  // Find lines containing the query
+  const matchingLines = contentLines
+    .map((line, index) => ({ line, index }))
+    .filter(({ line }) => line.toLowerCase().includes(lowerQuery))
+    .slice(0, lines)
+
+  if (matchingLines.length === 0) {
+    // Return first few lines if no matches
+    return contentLines.slice(0, lines).join('\\n')
+  }
+
+  // Get context around first match
+  const matchIndex = matchingLines[0].index
+  const start = Math.max(0, matchIndex - Math.floor(lines / 2))
+  const end = Math.min(contentLines.length, start + lines)
+
+  return contentLines.slice(start, end).join('\\n')
+}
+
+const findSemanticMatches = (content: string, query: string): any[] => {
+  const lines = content.split('\\n')
+  const matches = []
+  const lowerQuery = query.toLowerCase()
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+    if (line.toLowerCase().includes(lowerQuery)) {
+      matches.push({
+        lineNumber: i + 1,
+        content: line.trim(),
+        type: 'text_match'
+      })
+    }
+  }
+
+  return matches
+}
+
+const escapeRegExp = (string: string): string => {
+  return string.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&')
+}
