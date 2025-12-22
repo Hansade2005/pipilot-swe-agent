@@ -1326,3 +1326,77 @@ export async function POST(req: Request) {
         }
       })
     }
+
+    // Stream the response
+    console.log(`[RepoAgent:${requestId.slice(0, 8)}] 🤖 Starting streamText with ${messages.length} messages`)
+    const result = await streamText({
+      model,
+      system: systemPrompt,
+      messages,
+      tools,
+      stopWhen: stepCountIs(60),
+      onFinish: async (result) => {
+        const responseTime = Date.now() - startTime
+        console.log(`[RepoAgent:${requestId.slice(0, 8)}] ✅ Stream finished in ${responseTime}ms - Total tokens: ${result.usage.totalTokens}`)
+      }
+    })
+
+    // Stream the response using newline-delimited JSON format (matching chat-v2 pattern)
+    return new Response(
+      new ReadableStream({
+        async start(controller) {
+          const encoder = new TextEncoder()
+
+          try {
+            // Stream the text and tool calls
+            for await (const part of result.fullStream) {
+              // Log tool calls and deltas
+              if (part.type === 'tool-call') {
+                console.log(`[RepoAgent:${requestId.slice(0, 8)}] 🔨 Tool call initiated:`, {
+                  toolName: (part as any).toolName,
+                  toolCallId: (part as any).toolCallId
+                })
+              } else if (part.type === 'tool-result') {
+                console.log(`[RepoAgent:${requestId.slice(0, 8)}] 🎯 Tool result received:`, {
+                  toolName: (part as any).toolName,
+                  toolCallId: (part as any).toolCallId,
+                  resultPreview: JSON.stringify((part as any).result)?.substring(0, 100) || 'N/A'
+                })
+              } else if (part.type === 'text-delta') {
+                // Text deltas are frequent, just count them silently
+              }
+              // Send each part as newline-delimited JSON (no SSE "data:" prefix)
+              controller.enqueue(encoder.encode(JSON.stringify(part) + '\n'))
+            }
+          } catch (error) {
+            console.error(`[RepoAgent:${requestId.slice(0, 8)}] ❌ Stream error:`, error)
+          } finally {
+            controller.close()
+          }
+        }
+      }),
+      {
+        headers: {
+          'Content-Type': 'text/plain; charset=utf-8',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive'
+        }
+      }
+    )
+
+  } catch (error: any) {
+    const responseTime = Date.now() - startTime
+    console.error(`[RepoAgent:${requestId.slice(0, 8)}] ❌ Error in POST handler (${responseTime}ms):`, {
+      message: error?.message,
+      code: error?.code,
+      status: error?.status,
+      repo: currentRepo,
+      branch: currentBranch
+    })
+
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
