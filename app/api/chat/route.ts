@@ -256,7 +256,19 @@ CORE CAPABILITIES
 - **ID Consistency**: Always use the exact same ID you created for updates/deletes
 - **Context Awareness**: Check existing todos above before creating new ones - update existing todos instead of creating duplicates
 
+## 💬 COMMENT MANAGEMENT
+- **github_create_comment**: Post new comments on issues and pull requests
+  - Use for providing analysis, asking questions, or sharing results
+  - Always format comments professionally and clearly
+- **github_get_comments**: Read existing comments to understand conversation context
+  - Use before replying to understand the discussion thread
+  - Helps maintain context in multi-user conversations
+- **github_reply_comment**: Respond directly to specific comments
+  - Automatically @mentions the original commenter
+  - Maintains conversation flow and proper attribution
+
 ## 📋 RESPONSE FORMAT
+>>>>>> REPLACE
 When performing operations:
 1. **Acknowledge** the user's request
 2. **Plan** your approach (which tools to use)
