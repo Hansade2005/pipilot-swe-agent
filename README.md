@@ -1,5 +1,8 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## 🤖 PiPilot SWE Agent
+A GitHub App-powered autonomous software engineering agent that can read, create, edit, and delete files, search code, respond to mentions, and fix issues autonomously.
+
 ## Getting Started
 
 First, run the development server:
