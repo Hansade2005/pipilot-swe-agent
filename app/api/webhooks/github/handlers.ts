@@ -121,7 +121,6 @@ export async function handlePullRequestEvent(payload: WebhookEvent) {
     console.error('Error processing PR event:', error);
   }
 }
-
 // Process pull request review comment events
 export async function handlePullRequestReviewCommentEvent(payload: WebhookEvent) {
   const { action, comment, repository, pull_request } = payload;
