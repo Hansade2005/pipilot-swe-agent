@@ -1,10 +1,10 @@
 {
-  "buildCommand": "yarn build",
-  "installCommand": "yarn install",
-  "functions": {
-    "app/api/**/*.ts": {
-      "maxDuration": 300
+  \"buildCommand\": \"npm run build\",
+  \"installCommand\": \"npm ci\",
+  \"functions\": {
+    \"app/api/**/*.ts\": {
+      \"maxDuration\": 300
     }
   },
-  "regions": ["iad1"]
+  \"regions\": [\"iad1\"]
 }
