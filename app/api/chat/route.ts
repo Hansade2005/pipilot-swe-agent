@@ -3738,7 +3738,6 @@ Assistant:
           }
         }
       })
->>>>>> REPLACE
     }
 
     // Stream the response
