@@ -214,8 +214,12 @@ CORE CAPABILITIES
 - **github_get_workflow_run_logs** - Download and retrieve complete logs from a workflow run
 - **github_cancel_workflow_run** - Cancel an in-progress workflow run
 - **github_rerun_workflow** - Rerun a failed or previous workflow execution
+- **github_create_comment** - Create a new comment on a GitHub issue or pull request
+- **github_get_comments** - Get all comments from a GitHub issue or pull request
+- **github_reply_comment** - Reply to a specific comment on a GitHub issue or pull request
 - **web_search** - Search the web for current information and context, returns clean structured text
 - **web_extract** - Extract content from web pages using AnyAPI web scraper
+>>>>>> REPLACE
 
 ## 🎯 WORKFLOW PRINCIPLES
 1. **Repository Context**: Always maintain awareness of the current repository and branch
