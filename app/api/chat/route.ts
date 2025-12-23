@@ -298,9 +298,10 @@ const createOctokitClient = (token: string) => {
 
 const getUserEmail = async (octokit: Octokit) => {
   try {
-    const emails = await octokit.users.listEmailsForAuthenticatedUser()
-    const primaryEmail = emails.data.find(email => email.primary && email.verified)
-    return primaryEmail ? primaryEmail.email : null
+    // GitHub Apps don't have access to user email endpoints
+    // Return null to avoid 403 errors
+    console.log('GitHub App context: skipping user email lookup')
+    return null
   } catch (error) {
     console.error('Failed to get user email:', error)
     return null
