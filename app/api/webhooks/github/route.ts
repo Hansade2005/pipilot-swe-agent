@@ -106,13 +106,15 @@ export async function POST(request: NextRequest) {
 
 // Handle app installation events
 async function handleInstallation(payload: WebhookEvent) {
-  const { action, installation, repositories } = payload;
+  const { action, installation, repositories_added, repositories_removed } = payload;
 
   if (action === 'created') {
-    console.log(`App installed on repositories:`, repositories);
+    const repos = repositories_added || [];
+    console.log(`App installed on repositories:`, repos.map(r => r.full_name));
     // Could store installation info in database here
   } else if (action === 'deleted') {
-    console.log(`App uninstalled from repositories`);
+    const repos = repositories_removed || [];
+    console.log(`App uninstalled from repositories:`, repos.map(r => r.full_name));
     // Could clean up installation data here
   }
 }
