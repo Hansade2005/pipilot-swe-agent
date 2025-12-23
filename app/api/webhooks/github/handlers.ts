@@ -117,7 +117,6 @@ export async function handlePullRequestEvent(payload: WebhookEvent) {
     });
 
     // AI handles commenting directly via tools
-    }
 
   } catch (error) {
     console.error('Error processing PR event:', error);
