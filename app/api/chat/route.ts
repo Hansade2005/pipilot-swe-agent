@@ -3556,7 +3556,173 @@ Assistant:
             };
           }
         }
+      }),
+
+      // GitHub Comment Management Tools
+      github_create_comment: tool({
+        description: 'Create a new comment on a GitHub issue or pull request',
+        inputSchema: z.object({
+          repo: z.string().describe('Repository in format "owner/repo"'),
+          issue_number: z.number().describe('Issue or PR number'),
+          body: z.string().describe('Comment body text')
+        }),
+        execute: async ({ repo, issue_number, body }) => {
+          console.log(`[RepoAgent:${requestId.slice(0, 8)}] 🔧 Tool call: github_create_comment - Input:`, { repo, issue_number, bodyLen: body.length })
+          try {
+            const { owner, repo: repoName } = parseRepoString(repo)
+            const response = await octokit.rest.issues.createComment({
+              owner,
+              repo: repoName,
+              issue_number,
+              body
+            })
+
+            const result = {
+              success: true,
+              comment: {
+                id: response.data.id,
+                node_id: response.data.node_id,
+                url: response.data.url,
+                html_url: response.data.html_url,
+                body: response.data.body,
+                user: {
+                  login: response.data.user?.login,
+                  id: response.data.user?.id,
+                  avatar_url: response.data.user?.avatar_url
+                },
+                created_at: response.data.created_at,
+                updated_at: response.data.updated_at
+              }
+            }
+            console.log(`[RepoAgent:${requestId.slice(0, 8)}] ✅ github_create_comment completed - Comment ID: ${result.comment.id}`)
+            return result
+          } catch (error) {
+            const errorMsg = `Failed to create comment: ${error instanceof Error ? error.message : 'Unknown error'}`
+            console.error(`[RepoAgent:${requestId.slice(0, 8)}] ❌ github_create_comment failed:`, errorMsg)
+            return {
+              success: false,
+              error: errorMsg
+            }
+          }
+        }
+      }),
+
+      github_get_comments: tool({
+        description: 'Get all comments from a GitHub issue or pull request',
+        inputSchema: z.object({
+          repo: z.string().describe('Repository in format "owner/repo"'),
+          issue_number: z.number().describe('Issue or PR number'),
+          per_page: z.number().min(1).max(100).optional().describe('Number of comments per page (default: 30)')
+        }),
+        execute: async ({ repo, issue_number, per_page = 30 }) => {
+          console.log(`[RepoAgent:${requestId.slice(0, 8)}] 🔧 Tool call: github_get_comments - Input:`, { repo, issue_number, per_page })
+          try {
+            const { owner, repo: repoName } = parseRepoString(repo)
+            const response = await octokit.rest.issues.listComments({
+              owner,
+              repo: repoName,
+              issue_number,
+              per_page
+            })
+
+            const result = {
+              success: true,
+              total_count: response.data.length,
+              comments: response.data.map(comment => ({
+                id: comment.id,
+                node_id: comment.node_id,
+                url: comment.url,
+                html_url: comment.html_url,
+                body: comment.body,
+                user: {
+                  login: comment.user?.login,
+                  id: comment.user?.id,
+                  avatar_url: comment.user?.avatar_url,
+                  type: comment.user?.type
+                },
+                created_at: comment.created_at,
+                updated_at: comment.updated_at,
+                author_association: comment.author_association
+              }))
+            }
+            console.log(`[RepoAgent:${requestId.slice(0, 8)}] ✅ github_get_comments completed - Found ${result.total_count} comments`)
+            return result
+          } catch (error) {
+            const errorMsg = `Failed to get comments: ${error instanceof Error ? error.message : 'Unknown error'}`
+            console.error(`[RepoAgent:${requestId.slice(0, 8)}] ❌ github_get_comments failed:`, errorMsg)
+            return {
+              success: false,
+              error: errorMsg
+            }
+          }
+        }
+      }),
+
+      github_reply_comment: tool({
+        description: 'Reply to a specific comment on a GitHub issue or pull request by creating a new comment that references it',
+        inputSchema: z.object({
+          repo: z.string().describe('Repository in format "owner/repo"'),
+          issue_number: z.number().describe('Issue or PR number'),
+          comment_id: z.number().describe('ID of the comment to reply to'),
+          body: z.string().describe('Reply body text')
+        }),
+        execute: async ({ repo, issue_number, comment_id, body }) => {
+          console.log(`[RepoAgent:${requestId.slice(0, 8)}] 🔧 Tool call: github_reply_comment - Input:`, { repo, issue_number, comment_id, bodyLen: body.length })
+          try {
+            const { owner, repo: repoName } = parseRepoString(repo)
+
+            // First get the original comment to include context
+            const originalComment = await octokit.rest.issues.getComment({
+              owner,
+              repo: repoName,
+              comment_id
+            })
+
+            // Create a reply that references the original comment
+            const replyBody = `@${originalComment.data.user?.login} ${body}`
+
+            const response = await octokit.rest.issues.createComment({
+              owner,
+              repo: repoName,
+              issue_number,
+              body: replyBody
+            })
+
+            const result = {
+              success: true,
+              reply: {
+                id: response.data.id,
+                node_id: response.data.node_id,
+                url: response.data.url,
+                html_url: response.data.html_url,
+                body: response.data.body,
+                user: {
+                  login: response.data.user?.login,
+                  id: response.data.user?.id,
+                  avatar_url: response.data.user?.avatar_url
+                },
+                created_at: response.data.created_at,
+                updated_at: response.data.updated_at
+              },
+              replied_to: {
+                comment_id: originalComment.data.id,
+                user: originalComment.data.user?.login,
+                body_preview: originalComment.data.body?.substring(0, 100) + (originalComment.data.body && originalComment.data.body.length > 100 ? '...' : '')
+              }
+            }
+            console.log(`[RepoAgent:${requestId.slice(0, 8)}] ✅ github_reply_comment completed - Reply ID: ${result.reply.id}`)
+            return result
+          } catch (error) {
+            const errorMsg = `Failed to reply to comment: ${error instanceof Error ? error.message : 'Unknown error'}`
+            console.error(`[RepoAgent:${requestId.slice(0, 8)}] ❌ github_reply_comment failed:`, errorMsg)
+            return {
+              success: false,
+              error: errorMsg
+            }
+          }
+        }
       })
+>>>>>> REPLACE
     }
 
     // Stream the response
