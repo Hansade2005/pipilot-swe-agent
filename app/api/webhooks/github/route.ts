@@ -44,6 +44,7 @@ export async function POST(request: NextRequest) {
         break;
 
       case 'issues':
+      case 'issue_comment':
         await handleIssueEvent(payload);
         break;
 
