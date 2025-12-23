@@ -1,6 +1,5 @@
 import { createOpenAI } from '@ai-sdk/openai';
 import { createMistral } from '@ai-sdk/mistral';
-import { createCohere } from '@ai-sdk/cohere';
 import { createXai } from '@ai-sdk/xai';
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 
@@ -132,6 +131,13 @@ function createA0Dev(options: { apiKey?: string } = {}) {
 // Create the a0.dev provider instance (no API key required)
 const a0devProvider = createA0Dev();
 
+// Create Vercel AI Gateway provider
+const vercelGateway = createOpenAICompatible({
+  name: 'vercel-gateway',
+  baseURL: 'https://ai-gateway.vercel.sh/v1',
+  apiKey: process.env.VERCEL_AI_GATEWAY_API_KEY || '',
+});
+
 // Create the default Codestral client
 const codestral = createOpenAICompatible({
   name: 'codestral',
@@ -148,18 +154,8 @@ const mistralProvider = createMistral({
   apiKey: process.env.MISTRAL_API_KEY || 'W8txIqwcJnyHBTthSlouN2w3mQciqAUr',
 });
 
-const cohereProvider = createCohere({
-  apiKey: process.env.COHERE_API_KEY || 'LMzu7i1zyxk5LWzBE1iDXRSwFwHvMLwZDhFhpP7q',
-});
-
 const xaiProvider = createXai({
   apiKey: process.env.XAI_API_KEY || 'xai-your-api-key-here',
-});
-
-const minimaxProvider = createOpenAICompatible({
-  name: 'minimax',
-  baseURL: 'https://api.minimax.io/v1',
-  apiKey: process.env.MINIMAX_API_KEY || 'your-minimax-api-key',
 });
 
 const openrouterProvider = createOpenAICompatible({
@@ -170,12 +166,6 @@ const openrouterProvider = createOpenAICompatible({
     'HTTP-Referer': 'https://pipilot.dev', // app's URL
     'X-Title': 'PiPilot', // app's display name
   },
-});
-
-const zenmuxProvider = createOpenAICompatible({
-  name: 'zenmux',
-  baseURL: 'https://zenmux.ai/api/v1',
-  apiKey: process.env.ZENMUX_API_KEY || 'sk-ai-v1-apikey',
 });
 
 // Create PiPilot Local Provider (OpenAI Compatible)
@@ -192,106 +182,48 @@ const pipilotProvider = createOpenAICompatible({
   apiKey: 'not-needed', // Internal API doesn't require key
 });
 
-// Custom OpenRouter provider with reasoning support for specific models
-function openrouterProviderWithReasoning(modelId: string) {
-  const baseProvider = openrouterProvider(modelId);
+// Smart routing for xAI Grok Code Fast 1 - tries gateway first, falls back to direct xAI
+function createSmartXaiGrokProvider() {
+  const gatewayModel = vercelGateway('xai/grok-code-fast-1');
+  const directXaiModel = xaiProvider('grok-code-fast-1');
 
-  // Models that support reasoning
-  const reasoningModels = [
-    'deepseek/deepseek-v3.2-exp',
-    'x-ai/grok-4-fast',
-    'qwen/qwen3-30b-a3b-thinking-2507',
-    'qwen/qwen3-next-80b-a3b-thinking',
-    'tngtech/deepseek-r1t2-chimera:free',
-    'deepseek/deepseek-chat-v3.1:free',
-    'deepseek/deepseek-chat-v3.1'
-  ];
-
-  // Enable prompt caching for all OpenRouter models
-  const cacheControl = {
-    type: 'ephemeral'
-  };
-
-  if (reasoningModels.includes(modelId)) {
-    // Return a wrapped provider that enables reasoning and caching
-    return {
-      ...baseProvider,
-      // Override the doGenerate and doStream methods to include reasoning options and cache control
-      async doGenerate(options: any) {
-        const enhancedOptions = {
-          ...options,
-          providerOptions: {
-            ...options.providerOptions,
-            openrouter: {
-              ...options.providerOptions?.openrouter,
-              reasoningEffort: 'medium', // Enable medium reasoning effort
-              cache_control: cacheControl // Enable prompt caching
-            }
-          }
-        };
-        return baseProvider.doGenerate(enhancedOptions);
-      },
-      async doStream(options: any) {
-        const enhancedOptions = {
-          ...options,
-          providerOptions: {
-            ...options.providerOptions,
-            openrouter: {
-              ...options.providerOptions?.openrouter,
-              reasoningEffort: 'medium', // Enable medium reasoning effort
-              cache_control: cacheControl // Enable prompt caching
-            }
-          }
-        };
-        return baseProvider.doStream(enhancedOptions);
-      }
-    };
-  }
-
-  // For non-reasoning models, still enable caching
   return {
-    ...baseProvider,
-    // Override the doGenerate and doStream methods to include cache control
+    ...gatewayModel,
     async doGenerate(options: any) {
-      const enhancedOptions = {
-        ...options,
-        providerOptions: {
-          ...options.providerOptions,
-          openrouter: {
-            ...options.providerOptions?.openrouter,
-            cache_control: cacheControl // Enable prompt caching
-          }
-        }
-      };
-      return baseProvider.doGenerate(enhancedOptions);
+      try {
+        // Try gateway first
+        return await gatewayModel.doGenerate(options);
+      } catch (error) {
+        console.log('Gateway failed for xAI Grok Code Fast 1, falling back to direct xAI provider');
+        // Fall back to direct xAI provider
+        return await directXaiModel.doGenerate(options);
+      }
     },
     async doStream(options: any) {
-      const enhancedOptions = {
-        ...options,
-        providerOptions: {
-          ...options.providerOptions,
-          openrouter: {
-            ...options.providerOptions?.openrouter,
-            cache_control: cacheControl // Enable prompt caching
-          }
-        }
-      };
-      return baseProvider.doStream(enhancedOptions);
+      try {
+        // Try gateway first
+        return await gatewayModel.doStream(options);
+      } catch (error) {
+        console.log('Gateway failed for xAI Grok Code Fast 1, falling back to direct xAI provider');
+        // Fall back to direct xAI provider
+        return await directXaiModel.doStream(options);
+      }
     }
   };
 }
+
+const smartXaiGrokProvider = createSmartXaiGrokProvider();
 
 // Debug function to check environment variables
 function checkProviderKeys() {
   const keys = {
     a0dev: process.env.A0_DEV_API_KEY || 'Not required',
     codestral: process.env.CODESTRAL_API_KEY || 'DXfXAjwNIZcAv1ESKtoDwWZZF98lJxho',
-    openai: process.env.OPENAI_API_KEY || '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',
+    vercelGateway: process.env.VERCEL_AI_GATEWAY_API_KEY || '',
+    openai: process.env.OPENAI_API_KEY || '',
     mistral: process.env.MISTRAL_API_KEY || 'W8txIqwcJnyHBTthSlouN2w3mQciqAUr',
-
-    cohere: process.env.COHERE_API_KEY || 'LMzu7i1zyxk5LWzBE1iDXRSwFwHvMLwZDhFhpP7q',
     xai: process.env.XAI_API_KEY || 'xai-your-api-key-here',
-    zenmux: process.env.ZENMUX_API_KEY || 'sk-ai-v1-8176b4d7521f4744fbd0b3e594aedac1b77485a4c3f579eded0bc52c68909da0',
+    openrouter: process.env.OPENROUTER_API_KEY || '',
   };
 
   if (process.env.NODE_ENV === 'development') {
@@ -301,11 +233,11 @@ function checkProviderKeys() {
       const envVarMap: Record<string, string> = {
         a0dev: 'A0_DEV_API_KEY',
         codestral: 'CODESTRAL_API_KEY',
+        vercelGateway: 'VERCEL_AI_GATEWAY_API_KEY',
         openai: 'OPENAI_API_KEY',
         mistral: 'MISTRAL_API_KEY',
-        cohere: 'COHERE_API_KEY',
         xai: 'XAI_API_KEY',
-        zenmux: 'ZENMUX_API_KEY',
+        openrouter: 'OPENROUTER_API_KEY',
       };
       const isEnvVar = !!process.env[envVarMap[provider]];
       const status = isEnvVar ? '✅ Env' : '🔄 Fallback';
@@ -325,83 +257,30 @@ if (process.env.NODE_ENV === 'development') {
 
 // Model mapping with direct provider instances
 const modelProviders: Record<string, any> = {
-  // Auto/Default Option - uses Grok Code Fast 1
-  'auto': xaiProvider('grok-code-fast-1'), // Auto selection uses Grok Code Fast 1
+  // Auto/Default Option - uses Grok Code Fast 1 with smart routing
+  'auto': smartXaiGrokProvider,
 
-  // Codestral Models (OpenAI Compatible)
+  // Codestral Models (Custom - kept as is)
   'codestral-latest': codestral('codestral-latest'),
 
-  // a0.dev Models
+  // a0.dev Models (Custom - kept as is)
   'a0-dev-llm': a0devProvider.languageModel('a0-dev-llm'),
 
-  // PiPilot Local Models (OpenAI Compatible)
-  'pipilot-1-chat': pipilotProvider('pipilot-1-chat'),
-  'pipilot-1-code': pipilotProvider('pipilot-1-code'),
-  'pipilot-1-vision': pipilotProvider('pipilot-1-vision'),
-  'pipilot-1-thinking': pipilotProvider('pipilot-1-thinking'),
-
-  // PiPilot Premium Models (Claude via OpenRouter)
-  'pipilot-pro': openrouterProviderWithReasoning('anthropic/claude-sonnet-4'),
-  'pipilot-ultra': openrouterProviderWithReasoning('anthropic/claude-sonnet-4.5'),
-
-  // Mistral Models - Default uses Codestral endpoint
-  'open-codestral-mamba': mistralProvider('open-codestral-mamba'),
+  // Mistral Models
   'pixtral-12b-2409': mistralProvider('pixtral-12b-2409'),
-  'mistral-small-2503': mistralProvider('mistral-small-2503'),
-  'mistral-small-2506': mistralProvider('mistral-small-2506'),
-  'open-mistral-nemo': mistralProvider('open-mistral-nemo'),
 
-  // OpenAI Models
-  'gpt-4o': openaiProvider('gpt-4o'),
-  'gpt-4o-mini': openaiProvider('gpt-4o-mini'),
-  'gpt-5-mini': openaiProvider('gpt-5-mini'),
-  'gpt-4.1-nano': openaiProvider('gpt-4.1-nano'),
-  'gpt-5-nano': openaiProvider('gpt-5-nano'),
-  'gpt-4.1-mini': openaiProvider('gpt-4.1-mini'),
-
-  // MiniMax Models (OpenAI Compatible)
-  'minimax-m2': minimaxProvider('MiniMax-M2'),
-
-  // Cohere Models (v2 compatible with AI SDK 5 - confirmed working)
-  'command-r-plus': cohereProvider('command-r-plus-04-2024'),
-  'command-r': cohereProvider('command-r-08-2024'),
-  'command': cohereProvider('command-nightly'),
-  'command-a-reasoning-08-2025': cohereProvider('command-a-03-2025'),
-
-  // xAI Grok Models
-  'grok-code-fast-1': xaiProvider('grok-code-fast-1'),
-  'grok-3': xaiProvider('grok-3'),
-  'grok-3-mini': xaiProvider('grok-3-mini'),
-  'grok-3-mini-fast': xaiProvider('grok-3-mini-fast'),
-  'grok-3-latest': xaiProvider('grok-3-latest'),
-  'grok-4-fast-non-reasoning': xaiProvider('grok-4-fast-non-reasoning'),
-  'grok-4-1-fast-non-reasoning': xaiProvider('grok-4-1-fast-non-reasoning'),
-  'grok-4-1-fast-reasoning': xaiProvider('grok-4-1-fast-reasoning'),
-
-  // OpenRouter Claude Models
-  'claude-sonnet-4.5': openrouterProviderWithReasoning('anthropic/claude-sonnet-4.5'),
-  'claude-sonnet-4': openrouterProviderWithReasoning('anthropic/claude-sonnet-4'),
-  'claude-haiku-4.5': openrouterProviderWithReasoning('anthropic/claude-haiku-4.5'),
-
-  // OpenRouter Advanced Models (with reasoning support)
-  'deepseek-v3.2-exp': openrouterProviderWithReasoning('deepseek/deepseek-v3.2-exp'),
-  'grok-4-fast-reasoning': openrouterProviderWithReasoning('x-ai/grok-4-fast'),
-  'qwen3-30b-thinking': openrouterProviderWithReasoning('qwen/qwen3-30b-a3b-thinking-2507'),
-  'qwen3-coder': openrouterProviderWithReasoning('qwen/qwen3-coder'),
-  'qwen3-coder-free': openrouterProviderWithReasoning('qwen/qwen3-coder:free'),
-  'qwen3-coder-30b-instruct': openrouterProviderWithReasoning('qwen/qwen3-coder-30b-a3b-instruct'),
-  'deepseek-r1t2-chimera-free': openrouterProviderWithReasoning('tngtech/deepseek-r1t2-chimera:free'),
-  'qwen3-next-80b-thinking': openrouterProviderWithReasoning('qwen/qwen3-next-80b-a3b-thinking'),
-  'phi-4-multimodal': openrouterProviderWithReasoning('microsoft/phi-4-multimodal-instruct'),
-  'deepseek-chat-v3.1': openrouterProviderWithReasoning('deepseek/deepseek-chat-v3.1'),
-
-  // ZenMux Models
-  'kuaishou/kat-coder-pro-v1': zenmuxProvider('kuaishou/kat-coder-pro-v1'),
-  'volcengine/doubao-seed-code': zenmuxProvider('volcengine/doubao-seed-code'),
-
-  // Additional OpenRouter Models
-  'kwaipilot/kat-coder-pro:free': openrouterProviderWithReasoning('kwaipilot/kat-coder-pro:free'),
-  'qwen/qwen-turbo': openrouterProviderWithReasoning('qwen/qwen-turbo'),
+  // Vercel AI Gateway Models
+  'mistral/devstral-2': vercelGateway('mistral/devstral-2'),
+  'kwaipilot/kat-coder-pro-v1': vercelGateway('kwaipilot/kat-coder-pro-v1'),
+  'xai/grok-code-fast-1': smartXaiGrokProvider,
+  'nvidia/nemotron-nano-12b-v2-vl': vercelGateway('nvidia/nemotron-nano-12b-v2-vl'),
+  'minimax/minimax-m2': vercelGateway('minimax/minimax-m2'),
+  'moonshotai/kimi-k2-thinking': vercelGateway('moonshotai/kimi-k2-thinking'),
+  'mistral/devstral-small-2': vercelGateway('mistral/devstral-small-2'),
+  'anthropic/claude-haiku-4.5': vercelGateway('anthropic/claude-haiku-4.5'),
+  'alibaba/qwen3-coder-plus': vercelGateway('alibaba/qwen3-coder-plus'),
+  'anthropic/claude-sonnet-4.5': vercelGateway('anthropic/claude-sonnet-4.5'),
+  'meituan/longcat-flash-chat': vercelGateway('meituan/longcat-flash-chat'),
 };
 
 // Helper function to get a model by ID
@@ -416,12 +295,11 @@ export function getModel(modelId: string) {
 // Export individual providers for direct use if needed
 export {
   a0devProvider as a0dev,
+  vercelGateway,
   openaiProvider as openai,
   mistralProvider as mistral,
-  cohereProvider as cohere,
   xaiProvider as xai,
   openrouterProvider as openrouter,
-  zenmuxProvider as zenmux,
   codestral,
   createOpenAICompatible,
 };
