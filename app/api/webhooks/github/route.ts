@@ -205,7 +205,7 @@ async function handlePullRequestReviewComment(payload: WebhookEvent) {
   const body = comment.body || '';
 
   if (/@pipilot-swe-agent/i.test(body)) {
-    console.log(`Bot mentioned in PR #${pull_request.number} review comment`);
+    console.log(`Bot mentioned in PR #${pull_request.number} review comment (pipilot-swe-agent)`);
 
     await queueAgentTask({
       type: 'pr_review_comment',
