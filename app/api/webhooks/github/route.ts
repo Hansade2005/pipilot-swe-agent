@@ -250,7 +250,7 @@ async function queueAgentTask(task: any) {
   }
 }
 
-// Process agent task by calling the repo-agent API
+// Process agent task by calling the chat API
 async function processAgentTask(task: any) {
   try {
     console.log('Processing agent task:', task.type);
@@ -271,22 +271,37 @@ async function processAgentTask(task: any) {
       return;
     }
 
-    // Call the repo-agent API with the installation ID
-    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/repo-agent`, {
+    // Get installation token for GitHub API access
+    const installationToken = await getInstallationToken(task.installationId);
+    if (!installationToken) {
+      console.error('Failed to get installation token');
+      return;
+    }
+
+    // Get repository info to determine default branch
+    const repoInfo = await getRepositoryInfo(task.installationId, task.repository);
+    const defaultBranch = repoInfo?.default_branch || 'main';
+
+    // Format as messages array for the chat API
+    const messages = [
+      {
+        role: 'user',
+        content: command
+      }
+    ];
+
+    // Call the chat API (not repo-agent)
+    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/chat`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        installationId: task.installationId,
-        repository: task.repository,
-        command: command,
-        context: {
-          type: task.type,
-          issueNumber: task.issueNumber,
-          pullRequestNumber: task.pullRequestNumber,
-          commentId: task.commentId,
-        }
+        messages: messages,
+        repo: task.repository,
+        branch: defaultBranch,
+        githubToken: installationToken,
+        modelId: 'claude-3-5-sonnet-20241022'
       })
     });
 
