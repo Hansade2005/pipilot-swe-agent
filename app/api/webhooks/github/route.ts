@@ -179,7 +179,7 @@ async function handlePullRequest(payload: WebhookEvent) {
   if (action === 'opened' || action === 'synchronize') {
     console.log(`Processing PR #${pull_request.number}: ${pull_request.title}`);
 
-    // Check PR description and comments for bot mentions
+    // Check PR description and comments for bot mentions (pipilot-swe-agent)
     const body = pull_request.body || '';
     const hasMention = /@pipilot-swe-agent/i.test(body);
 
