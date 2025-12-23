@@ -210,12 +210,15 @@ export async function handleInstallation(payload: WebhookEvent) {
   }
 }
 
-// Call the chat API
+// Call the chat API - AI will use tools to communicate directly
 async function callChatAPI(params: {
   messages: Array<{ role: string; content: string }>;
   repo: string;
   branch: string;
   githubToken: string;
+  issueNumber?: number;
+  commentId?: number;
+  isReply?: boolean;
 }) {
   try {
     const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/chat`, {
@@ -231,8 +234,9 @@ async function callChatAPI(params: {
       return null;
     }
 
-    const data = await response.json();
-    return data.response || null;
+    // AI uses tools to communicate directly - no text response expected
+    console.log('Chat API called - AI will use commenting tools to respond');
+    return true;
   } catch (error) {
     console.error('Error calling chat API:', error);
     return null;
