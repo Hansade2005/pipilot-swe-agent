@@ -47,24 +47,18 @@ export async function handleIssueEvent(payload: WebhookEvent) {
       content: command || 'Please help me understand this issue.'
     }];
 
-    // Call the chat API and get response
-    const chatResponse = await callChatAPI({
+    // Call the chat API - AI will use github_create_comment tool to respond directly
+    await callChatAPI({
       messages,
       repo: repository.full_name,
       branch: defaultBranch,
-      githubToken: await getInstallationToken(installationId)
+      githubToken: await getInstallationToken(installationId),
+      issueNumber: issue!.number,
+      commentId: comment?.id,
+      isReply: !!comment?.id
     });
 
-    if (chatResponse) {
-      // Post response back to GitHub
-      await postCommentToGitHub(
-        installationId,
-        repository.full_name,
-        issue!.number,
-        comment?.id ? 'issue_comment' : 'issue',
-        chatResponse
-      );
-    }
+    // AI handles commenting directly via tools - no manual posting needed
 
   } catch (error) {
     console.error('Error processing issue event:', error);
