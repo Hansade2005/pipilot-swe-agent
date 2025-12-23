@@ -239,18 +239,15 @@ async function handleWorkflowRun(payload: WebhookEvent) {
 
 // Queue agent tasks for processing
 async function queueAgentTask(task: any) {
-  // In a real implementation, you'd queue this to a job queue like Redis, Bull, etc.
-  // For now, we'll just log it and simulate processing
-
   console.log('Queueing agent task:', task);
 
-  // Here you would typically:
-  // 1. Store the task in a database/queue
-  // 2. Trigger the agent processing workflow
-  // 3. The agent would then use the repo-agent API with the installation ID
-
-  // For development, you could directly call the agent here
-  // await processAgentTask(task);
+  // Process the task immediately for development/demo purposes
+  // In production, you'd want to use a proper job queue
+  try {
+    await processAgentTask(task);
+  } catch (error) {
+    console.error('Error processing agent task:', error);
+  }
 }
 
 // Optional: Process agent task immediately (for development)
