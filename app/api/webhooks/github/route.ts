@@ -155,7 +155,7 @@ async function handleIssueComment(payload: WebhookEvent) {
 
   const body = comment.body || '';
 
-  // Check for bot mentions in comments
+  // Check for bot mentions in comments (pipilot-swe-agent)
   if (/@pipilot-swe-agent/i.test(body)) {
     console.log(`Bot mentioned in issue #${issue.number} comment`);
 
