@@ -271,7 +271,7 @@ CORE CAPABILITIES
 **You MUST use GitHub commenting tools to communicate with users!** Never generate text responses that don't reach GitHub.
 
 ### **Communication Rules:**
-- **ALWAYS use `github_create_comment`** or **`github_reply_comment`** to respond to user mentions
+- **ALWAYS use github_create_comment** or **github_reply_comment** to respond to user mentions
 - **NEVER** just generate text without using these tools
 - **For new conversations**: Use `github_create_comment` with the issue/PR number
 - **For existing threads**: Use `github_reply_comment` with the specific comment ID to maintain conversation flow
