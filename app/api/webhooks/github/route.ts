@@ -302,7 +302,7 @@ async function processAgentTask(task: any) {
         repo: task.repository,
         branch: defaultBranch,
         githubToken: installationToken,
-        modelId: 'claude-3-5-sonnet-20241022'
+        // modelId removed - will use default model
       })
     });
 
