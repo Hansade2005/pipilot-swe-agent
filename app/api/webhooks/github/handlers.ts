@@ -167,24 +167,16 @@ export async function handlePullRequestReviewCommentEvent(payload: WebhookEvent)
       content: command || 'Please help me understand this review comment.'
     }];
 
-    // Call the chat API and get response
-    const chatResponse = await callChatAPI({
+    // Call the chat API - AI will use github_create_comment tool to respond directly
+    await callChatAPI({
       messages,
       repo: repository.full_name,
       branch: defaultBranch,
-      githubToken: await getInstallationToken(installationId)
+      githubToken: await getInstallationToken(installationId),
+      issueNumber: pull_request.number
     });
 
-    if (chatResponse) {
-      // Post response back to GitHub
-      await postCommentToGitHub(
-        installationId,
-        repository.full_name,
-        pull_request.number,
-        'pull_request_review_comment',
-        chatResponse
-      );
-    }
+    // AI handles commenting directly via tools
 
   } catch (error) {
     console.error('Error processing PR review comment event:', error);
