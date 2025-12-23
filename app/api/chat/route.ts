@@ -219,7 +219,6 @@ CORE CAPABILITIES
 - **github_reply_comment** - Reply to a specific comment on a GitHub issue or pull request
 - **web_search** - Search the web for current information and context, returns clean structured text
 - **web_extract** - Extract content from web pages using AnyAPI web scraper
->>>>>> REPLACE
 
 ## 🎯 WORKFLOW PRINCIPLES
 1. **Repository Context**: Always maintain awareness of the current repository and branch
