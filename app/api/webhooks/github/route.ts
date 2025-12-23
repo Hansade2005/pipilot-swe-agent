@@ -129,7 +129,7 @@ async function handleIssueEvent(payload: WebhookEvent) {
   const body = issue.body || '';
   const title = issue.title || '';
 
-  // Look for @ mentions of the bot
+  // Look for @ mentions of the bot (pipilot-swe-agent)
   const botMention = /@pipilot-swe-agent/i.test(body) || /@pipilot-swe-agent/i.test(title);
 
   if (action === 'opened' || botMention) {
