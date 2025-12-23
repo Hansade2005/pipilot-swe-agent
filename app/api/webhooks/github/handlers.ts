@@ -53,8 +53,7 @@ export async function handleIssueEvent(payload: WebhookEvent) {
       messages,
       repo: repository.full_name,
       branch: defaultBranch,
-      githubToken: await getInstallationToken(installationId),
-      modelId: 'claude-3-5-sonnet-20241022'
+      githubToken: await getInstallationToken(installationId)
     });
 
     if (chatResponse) {
@@ -107,25 +106,25 @@ export async function handlePullRequestEvent(payload: WebhookEvent) {
 
     const defaultBranch = repoInfo.default_branch || 'main';
 
-    // Extract command
+    // Extract command (remove bot mention)
     const command = content.replace(mentionPattern, '').trim();
 
+    // Prepare messages for chat API
     const messages = [{
       role: 'user' as const,
-      content: command || 'Please review this pull request.'
+      content: command || 'Please help me understand this pull request.'
     }];
 
-    // Call chat API
+    // Call the chat API and get response
     const chatResponse = await callChatAPI({
       messages,
       repo: repository.full_name,
       branch: defaultBranch,
-      githubToken: await getInstallationToken(installationId),
-      modelId: 'claude-3-5-sonnet-20241022'
+      githubToken: await getInstallationToken(installationId)
     });
 
     if (chatResponse) {
-      // Post as PR comment
+      // Post response back to GitHub
       await postCommentToGitHub(
         installationId,
         repository.full_name,
@@ -140,8 +139,75 @@ export async function handlePullRequestEvent(payload: WebhookEvent) {
   }
 }
 
-// Handle app installation events
-export async function handleInstallation(payload: WebhookEvent) {
+// Process pull request review comment events
+export async function handlePullRequestReviewCommentEvent(payload: WebhookEvent) {
+  const { action, comment, repository, sender } = payload;
+
+  // Only process new review comments
+  if (action !== 'created') {
+    return;
+  }
+
+  const content = comment?.body || '';
+  const installationId = payload.installation?.id;
+
+  if (!installationId || !content || !repository || !comment) {
+    return;
+  }
+
+  // Check if bot is mentioned
+  const mentionPattern = new RegExp(`@${BOT_NAME}\\b`, 'i');
+  if (!mentionPattern.test(content)) {
+    return;
+  }
+
+  console.log(`Processing PR review comment`);
+
+  try {
+    // Get repository info for default branch
+    const repoInfo = await getRepositoryInfo(installationId, repository.full_name);
+    if (!repoInfo) {
+      console.error('Failed to get repository info');
+      return;
+    }
+
+    const defaultBranch = repoInfo.default_branch || 'main';
+
+    // Extract command (remove bot mention)
+    const command = content.replace(mentionPattern, '').trim();
+
+    // Prepare messages for chat API
+    const messages = [{
+      role: 'user' as const,
+      content: command || 'Please help me understand this review comment.'
+    }];
+
+    // Call the chat API and get response
+    const chatResponse = await callChatAPI({
+      messages,
+      repo: repository.full_name,
+      branch: defaultBranch,
+      githubToken: await getInstallationToken(installationId)
+    });
+
+    if (chatResponse) {
+      // Post response back to GitHub
+      await postCommentToGitHub(
+        installationId,
+        repository.full_name,
+        comment.pull_request_url.split('/').pop()!, // Extract PR number from URL
+        'pull_request_review_comment',
+        chatResponse
+      );
+    }
+
+  } catch (error) {
+    console.error('Error processing PR review comment event:', error);
+  }
+}
+
+// Process installation events
+export async function handleInstallationEvent(payload: WebhookEvent) {
   const { action, installation, repositories_added, repositories_removed } = payload;
 
   if (action === 'created') {
@@ -158,8 +224,7 @@ async function callChatAPI(params: {
   messages: Array<{role: string, content: string}>,
   repo: string,
   branch: string,
-  githubToken: string | null,
-  modelId: string
+  githubToken: string | null
 }): Promise<string | null> {
   if (!githubToken) {
     console.error('No GitHub token available');
@@ -178,8 +243,8 @@ async function callChatAPI(params: {
         messages: params.messages,
         repo: params.repo,
         branch: params.branch,
-        githubToken: params.githubToken,
-        modelId: params.modelId
+        githubToken: params.githubToken
+        // No modelId - let the API use defaults
       })
     });
 
@@ -234,7 +299,7 @@ async function postCommentToGitHub(
   installationId: number,
   repo: string,
   issueNumber: number,
-  type: 'issue' | 'issue_comment' | 'pull_request',
+  type: 'issue' | 'issue_comment' | 'pull_request' | 'pull_request_review_comment',
   body: string
 ) {
   try {
