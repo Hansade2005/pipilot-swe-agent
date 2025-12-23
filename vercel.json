@@ -1,6 +1,6 @@
 {
-  "buildCommand": "npm run build",
-  "installCommand": "npm ci",
+  "buildCommand": "yarn build",
+  "installCommand": "yarn install",
   "functions": {
     "app/api/**/*.ts": {
       "maxDuration": 300
