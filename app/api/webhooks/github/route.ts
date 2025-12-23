@@ -51,6 +51,10 @@ export async function POST(request: NextRequest) {
         await handlePullRequestEvent(payload);
         break;
 
+      case 'pull_request_review_comment':
+        await handlePullRequestReviewCommentEvent(payload);
+        break;
+
       default:
         console.log(`Unhandled event: ${event}`);
     }
