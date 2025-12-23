@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { handleInstallation, handleIssueEvent, handlePullRequestEvent, handlePullRequestReviewCommentEvent, handlePRReviewEvent, handleCheckRunEvent } from './handlers';
+import { handleInstallation, handleIssueEvent, handlePullRequestEvent, handlePullRequestReviewCommentEvent } from './handlers';
+import { handlePRReviewEvent, handleCheckRunEvent } from './extra-handlers';
 import { WebhookEvent } from './types';
 
 // GitHub webhook secret - should be set in environment variables
