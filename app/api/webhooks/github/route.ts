@@ -250,14 +250,54 @@ async function queueAgentTask(task: any) {
   }
 }
 
-// Optional: Process agent task immediately (for development)
+// Process agent task by calling the repo-agent API
 async function processAgentTask(task: any) {
   try {
-    // Import and call the agent logic here
-    // This would be similar to the repo-agent API but triggered by webhooks
-
     console.log('Processing agent task:', task.type);
-    // Implementation would go here...
+
+    // Extract the command/request from the content
+    let command = '';
+    if (task.type === 'issue_analysis' || task.type === 'issue_comment') {
+      // Remove the bot mention and extract the actual command
+      command = task.content.replace(/@pipilot-swe-agent/gi, '').trim();
+    } else if (task.type === 'pull_request_review') {
+      command = `Review this pull request: ${task.title}`;
+    } else if (task.type === 'workflow_failure') {
+      command = `Fix this workflow failure: ${task.workflowName}`;
+    }
+
+    if (!command && task.type !== 'pull_request_review') {
+      console.log('No command extracted from task');
+      return;
+    }
+
+    // Call the repo-agent API with the installation ID
+    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/repo-agent`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        installationId: task.installationId,
+        repository: task.repository,
+        command: command,
+        context: {
+          type: task.type,
+          issueNumber: task.issueNumber,
+          pullRequestNumber: task.pullRequestNumber,
+          commentId: task.commentId,
+        }
+      })
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      console.error('Agent API error:', error);
+      return;
+    }
+
+    const result = await response.json();
+    console.log('Agent task completed successfully:', result);
 
   } catch (error) {
     console.error('Error processing agent task:', error);
