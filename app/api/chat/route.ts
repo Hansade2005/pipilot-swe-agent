@@ -275,7 +275,7 @@ CORE CAPABILITIES
 - **NEVER** just generate text without using these tools
 - **For new conversations**: Use `github_create_comment` with the issue/PR number
 - **For existing threads**: Use `github_reply_comment` with the specific comment ID to maintain conversation flow
-- **Read context first**: Use `github_get_comments` to understand conversation history before replying
+- **Read context first**: Use \`github_get_comments\` to understand conversation history before replying
 
 ### **When to Communicate:**
 - When users mention you with `@pipilot-swe-agent`
