@@ -140,73 +140,6 @@ export async function handlePullRequestEvent(payload: WebhookEvent) {
   }
 }
 
-// Process pull request review comment events
-export async function handlePullRequestReviewCommentEvent(payload: WebhookEvent) {
-  const { action, comment, repository, pull_request } = payload;
-
-  // Only process new review comments
-  if (action !== 'created') {
-    return;
-  }
-
-  const content = comment?.body || '';
-  const installationId = payload.installation?.id;
-
-  if (!installationId || !content || !repository || !pull_request) {
-    return;
-  }
-
-  // Check if bot is mentioned
-  const mentionPattern = new RegExp(`@${BOT_NAME}\\b`, 'i');
-  if (!mentionPattern.test(content)) {
-    return;
-  }
-
-  console.log(`Processing PR review comment on PR #${pull_request.number}`);
-
-  try {
-    // Get repository info for default branch
-    const repoInfo = await getRepositoryInfo(installationId, repository.full_name);
-    if (!repoInfo) {
-      console.error('Failed to get repository info');
-      return;
-    }
-
-    const defaultBranch = repoInfo.default_branch || 'main';
-
-    // Extract command
-    const command = content.replace(mentionPattern, '').trim();
-
-    const messages = [{
-      role: 'user' as const,
-      content: command || 'Please help with this code review.'
-    }];
-
-    // Call chat API
-    const chatResponse = await callChatAPI({
-      messages,
-      repo: repository.full_name,
-      branch: defaultBranch,
-      githubToken: await getInstallationToken(installationId),
-      modelId: 'claude-3-5-sonnet-20241022'
-    });
-
-    if (chatResponse) {
-      // Post as PR review comment reply
-      await postCommentToGitHub(
-        installationId,
-        repository.full_name,
-        pull_request.number,
-        'pull_request_review',
-        chatResponse
-      );
-    }
-
-  } catch (error) {
-    console.error('Error processing PR review comment event:', error);
-  }
-}
-
 // Handle app installation events
 export async function handleInstallation(payload: WebhookEvent) {
   const { action, installation, repositories_added, repositories_removed } = payload;
@@ -301,7 +234,7 @@ async function postCommentToGitHub(
   installationId: number,
   repo: string,
   issueNumber: number,
-  type: 'issue' | 'issue_comment' | 'pull_request' | 'pull_request_review',
+  type: 'issue' | 'issue_comment' | 'pull_request',
   body: string
 ) {
   try {
@@ -314,14 +247,9 @@ async function postCommentToGitHub(
     // Format the comment with bot attribution
     const formattedBody = `🤖 **PiPilot SWE Agent**\n\n${body}`;
 
-    let endpoint: string;
-    switch (type) {
-      case 'pull_request_review':
-        endpoint = `/repos/${repo}/pulls/${issueNumber}/comments`;
-        break;
-      default:
-        endpoint = `/repos/${repo}/issues/${issueNumber}/comments`;
-    }
+    const endpoint = type === 'pull_request'
+      ? `/repos/${repo}/issues/${issueNumber}/comments`
+      : `/repos/${repo}/issues/${issueNumber}/comments`;
 
     const response = await fetch(`https://api.github.com${endpoint}`, {
       method: 'POST',
