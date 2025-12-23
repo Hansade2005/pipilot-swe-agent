@@ -18,14 +18,29 @@ interface WebhookEvent {
   issue?: any;
   pull_request?: any;
   comment?: any;
-  repository: {
+  repository?: {
     full_name: string;
     owner: { login: string };
   };
-  sender: { login: string };
+  sender?: { login: string };
   installation: {
     id: number;
   };
+  repositories?: Array<{
+    full_name: string;
+    name: string;
+    private: boolean;
+  }>;
+  repositories_added?: Array<{
+    full_name: string;
+    name: string;
+    private: boolean;
+  }>;
+  repositories_removed?: Array<{
+    full_name: string;
+    name: string;
+    private: boolean;
+  }>;
 }
 
 export async function POST(request: NextRequest) {
