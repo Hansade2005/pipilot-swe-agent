@@ -21,7 +21,7 @@ export async function handleIssueEvent(payload: WebhookEvent) {
   }
 
   // Check if the bot is mentioned
-  const mentionPattern = new RegExp(`@${BOT_NAME}\\b`, 'i');
+  const mentionPattern = new RegExp(`@${BOT_NAME}\\\\b`, 'i');
   if (!mentionPattern.test(content)) {
     console.log('Bot not mentioned in issue/PR');
     return;
@@ -89,7 +89,7 @@ export async function handlePullRequestEvent(payload: WebhookEvent) {
   }
 
   // Check if bot is mentioned
-  const mentionPattern = new RegExp(`@${BOT_NAME}\\b`, 'i');
+  const mentionPattern = new RegExp(`@${BOT_NAME}\\\\b`, 'i');
   if (!mentionPattern.test(content)) {
     return;
   }
@@ -156,7 +156,7 @@ export async function handlePullRequestReviewCommentEvent(payload: WebhookEvent)
   }
 
   // Check if bot is mentioned
-  const mentionPattern = new RegExp(`@${BOT_NAME}\\b`, 'i');
+  const mentionPattern = new RegExp(`@${BOT_NAME}\\\\b`, 'i');
   if (!mentionPattern.test(content)) {
     return;
   }
@@ -207,7 +207,7 @@ export async function handlePullRequestReviewCommentEvent(payload: WebhookEvent)
 }
 
 // Process installation events
-export async function handleInstallationEvent(payload: WebhookEvent) {
+export async function handleInstallation(payload: WebhookEvent) {
   const { action, installation, repositories_added, repositories_removed } = payload;
 
   if (action === 'created') {
@@ -226,7 +226,7 @@ async function callChatAPI(params: {
   branch: string,
   githubToken: string | null
 }): Promise<string | null> {
-  if (!githubToken) {
+  if (!params.githubToken) {
     console.error('No GitHub token available');
     return null;
   }
@@ -269,7 +269,7 @@ async function callChatAPI(params: {
         if (done) break;
 
         const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split('\n').filter(line => line.trim());
+        const lines = chunk.split('\\n').filter(line => line.trim());
 
         for (const line of lines) {
           try {
@@ -310,7 +310,7 @@ async function postCommentToGitHub(
     }
 
     // Format the comment with bot attribution
-    const formattedBody = `🤖 **PiPilot SWE Agent**\n\n${body}`;
+    const formattedBody = `🤖 **PiPilot SWE Agent**\\n\\n${body}`;
 
     const endpoint = type === 'pull_request'
       ? `/repos/${repo}/issues/${issueNumber}/comments`
