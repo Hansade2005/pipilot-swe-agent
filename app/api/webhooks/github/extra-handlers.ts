@@ -102,18 +102,15 @@ export async function handleCheckRunEvent(payload: WebhookEvent) {
       content: `The CI/CD check "${check_run.name}" has failed. Please help analyze and fix this build failure. Check details: ${check_run.html_url}`
     }];
 
-    // Call the chat API and get response
-    const chatResponse = await callChatAPI({
+    // Call the chat API - AI will use tools to analyze and potentially create issues
+    await callChatAPI({
       messages,
       repo: repository.full_name,
       branch: defaultBranch,
       githubToken: await getInstallationToken(installationId)
     });
 
-    if (chatResponse) {
-      // Create an issue to track the CI failure
-      await createIssueForCIFailure(installationId, repository.full_name, check_run, chatResponse);
-    }
+    // AI can create issues using github_create_issue tool if needed
 
   } catch (error) {
     console.error('Error processing check run event:', error);
