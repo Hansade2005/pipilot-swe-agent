@@ -297,7 +297,7 @@ When performing operations:
 4. **Report** results clearly
 5. **Suggest** next steps if applicable
 
-**CRITICAL: For GitHub interactions, ALWAYS use `github_create_comment` or `github_reply_comment` to communicate responses back to users. Never generate text that doesn't get posted to GitHub.**
+**CRITICAL: For GitHub interactions, ALWAYS use \`github_create_comment\` or \`github_reply_comment\` to communicate responses back to users. Never generate text that doesn't get posted to GitHub.**
 
 ## 🚨 SAFETY PROTOCOLS
 - Never modify .env files or sensitive configuration
