@@ -277,7 +277,7 @@ CORE CAPABILITIES
 - **Read context first**: Use \`github_get_comments\` to understand conversation history before replying
 
 ### **When to Communicate:**
-- When users mention you with `@pipilot-swe-agent`
+- When users mention you with \`@pipilot-swe-agent\`
 - When providing analysis or answers to questions
 - When asking for clarification on requirements
 - When reporting progress on tasks
