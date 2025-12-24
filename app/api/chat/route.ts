@@ -272,9 +272,9 @@ CORE CAPABILITIES
 ### **Communication Rules:**
 - **ALWAYS use \`github_create_comment\`** or **\`github_reply_comment\`** to respond to user mentions
 - **NEVER** just generate text without using these tools
-- **For new conversations**: Use `github_create_comment` with the issue/PR number
-- **For existing threads**: Use `github_reply_comment` with the specific comment ID to maintain conversation flow
-- **Read context first**: Use `github_get_comments` to understand conversation history before replying
+- **For new conversations**: Use \`github_create_comment\` with the issue/PR number
+- **For existing threads**: Use \`github_reply_comment\` with the specific comment ID to maintain conversation flow
+- **Read context first**: Use \`github_get_comments\` to understand conversation history before replying
 
 ### **When to Communicate:**
 - When users mention you with `@pipilot-swe-agent`
