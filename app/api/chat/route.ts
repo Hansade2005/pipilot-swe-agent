@@ -3880,10 +3880,18 @@ Remember: Your responses must appear as comments on GitHub issues/PRs, not as te
         try {
           if (userId && installationId) {
             // Increment tasks_this_month for the user
-            await supabase
+            const { data: userData } = await supabase
               .from('users')
-              .update({ tasks_this_month: supabase.raw('tasks_this_month + 1') })
-              .eq('id', userId);
+              .select('tasks_this_month')
+              .eq('id', userId)
+              .single();
+
+            if (userData) {
+              await supabase
+                .from('users')
+                .update({ tasks_this_month: (userData.tasks_this_month || 0) + 1 })
+                .eq('id', userId);
+            }
 
             // Get repository information
             const [owner, repo] = currentRepo.split('/');
