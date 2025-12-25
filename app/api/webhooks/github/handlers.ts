@@ -44,7 +44,7 @@ export async function handleIssueEvent(payload: WebhookEvent) {
     // Prepare messages for chat API
     const messages = [{
       role: 'user' as const,
-      content: command || 'Please help me understand this issue.'
+      content: `Regarding issue #${issue.number}: ${command || 'Please help me understand this issue.'}`
     }];
 
     // Call the chat API - AI will use github_create_comment tool to respond directly
