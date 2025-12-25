@@ -9,16 +9,30 @@ const BOT_NAME = 'pipilot-swe-agent';
 export async function handleIssueEvent(payload: WebhookEvent) {
   const { action, issue, repository, sender, comment } = payload;
 
-  // Only process issue creation or new comments
-  if (action !== 'opened' && action !== 'created') {
+  // Log the full payload for debugging
+  console.log(`Issue event details: action=${action}, hasIssue=${!!issue}, hasComment=${!!comment}, hasRepository=${!!repository}, installationId=${payload.installation?.id}`);
+
+  // Process issue creation, edits, reopens, or new comments
+  if (action !== 'opened' && action !== 'created' && action !== 'edited' && action !== 'reopened') {
+    console.log(`Ignoring issue event with action: ${action}`);
     return;
   }
 
   const content = comment?.body || issue?.body || '';
   const installationId = payload.installation?.id;
 
-  if (!installationId || !content || !repository) {
-    console.log('Missing required data for issue event');
+  if (!installationId) {
+    console.log('Missing installation ID for issue event');
+    return;
+  }
+
+  if (!repository) {
+    console.log('Missing repository data for issue event');
+    return;
+  }
+
+  if (!content) {
+    console.log('Missing content (issue body or comment body) for issue event');
     return;
   }
 
@@ -56,7 +70,7 @@ export async function handleIssueEvent(payload: WebhookEvent) {
       return;
     }
 
-    const planLimits = PLAN_LIMITS[user.subscription_plan as keyof typeof PLAN_LIMITS];
+    const planLimits = PLAN_LIMITS[user.subscription_plan.toUpperCase() as keyof typeof PLAN_LIMITS] || PLAN_LIMITS.FREE;
     if (!planLimits || user.tasks_this_month >= planLimits.monthlyTasks) {
       let limitMessage: string;
       if (user.subscription_plan === 'free') {
@@ -149,7 +163,7 @@ export async function handlePullRequestEvent(payload: WebhookEvent) {
       return;
     }
 
-    const planLimits = PLAN_LIMITS[user.subscription_plan as keyof typeof PLAN_LIMITS];
+    const planLimits = PLAN_LIMITS[user.subscription_plan.toUpperCase() as keyof typeof PLAN_LIMITS] || PLAN_LIMITS.FREE;
     if (!planLimits || user.tasks_this_month >= planLimits.monthlyTasks) {
       let limitMessage: string;
       if (user.subscription_plan === 'free') {
@@ -236,7 +250,7 @@ export async function handlePullRequestReviewCommentEvent(payload: WebhookEvent)
       return;
     }
 
-    const planLimits = PLAN_LIMITS[user.subscription_plan as keyof typeof PLAN_LIMITS];
+    const planLimits = PLAN_LIMITS[user.subscription_plan.toUpperCase() as keyof typeof PLAN_LIMITS] || PLAN_LIMITS.FREE;
     if (!planLimits || user.tasks_this_month >= planLimits.monthlyTasks) {
       let limitMessage: string;
       if (user.subscription_plan === 'free') {
