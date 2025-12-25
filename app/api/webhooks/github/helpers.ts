@@ -74,3 +74,31 @@ export async function getRepositoryInfo(installationId: number, repo: string): P
     return null;
   }
 }
+
+// Create a comment on an issue
+export async function createComment(installationId: number, repo: string, issueNumber: number, body: string): Promise<void> {
+  try {
+    const token = await getInstallationToken(installationId);
+    if (!token) {
+      console.error('No token for commenting');
+      return;
+    }
+
+    const response = await fetch(`https://api.github.com/repos/${repo}/issues/${issueNumber}/comments`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `token ${token}`,
+        'Accept': 'application/vnd.github.v3+json',
+        'User-Agent': 'PiPilot-SWE-Agent',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ body })
+    });
+
+    if (!response.ok) {
+      console.error('Failed to create comment:', await response.text());
+    }
+  } catch (error) {
+    console.error('Error creating comment:', error);
+  }
+}

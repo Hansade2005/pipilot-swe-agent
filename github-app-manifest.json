@@ -1,12 +1,13 @@
 {
   "name": "PiPilot SWE Agent",
-  "url": "https://pipilot-swe-agent.vercel.app",
+  "url": "https://swe.pipilot.dev",
   "description": "An autonomous software engineering agent that can read, edit, and manage GitHub repositories through natural language commands.",
   "hook_attributes": {
-    "url": "https://pipilot-swe-agent.vercel.app/api/webhooks/github",
+    "url": "https://swe.pipilot.dev/api/webhooks/github",
     "active": true
   },
-  "redirect_url": "https://pipilot-swe-agent.vercel.app",
+  "redirect_url": "https://swe.pipilot.dev/api/oauth/callback",
+  "setup_url": "https://swe.pipilot.dev/setup",
   "public": false,
   "default_permissions": {
     "contents": "write",

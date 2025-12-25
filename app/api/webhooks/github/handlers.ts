@@ -1,5 +1,7 @@
-import { getInstallationToken, getRepositoryInfo } from './helpers';
+import { getInstallationToken, getRepositoryInfo, createComment } from './helpers';
 import { WebhookEvent } from './types';
+import { createClient } from '@/lib/supabase/server';
+import { PLAN_LIMITS } from '@/lib/stripe';
 
 const BOT_NAME = 'pipilot-swe-agent';
 
@@ -41,6 +43,35 @@ export async function handleIssueEvent(payload: WebhookEvent) {
     // Extract command (remove bot mention)
     const command = content.replace(new RegExp(`@${BOT_NAME}`, 'gi'), '').trim();
 
+    // Check user subscription and usage limits
+    const supabase = await createClient();
+    const { data: user } = await supabase
+      .from('users')
+      .select('id, subscription_plan, tasks_this_month')
+      .eq('github_username', sender.login)
+      .single();
+
+    if (!user) {
+      console.log('User not found in DB, skipping');
+      return;
+    }
+
+    const planLimits = PLAN_LIMITS[user.subscription_plan as keyof typeof PLAN_LIMITS];
+    if (!planLimits || user.tasks_this_month >= planLimits.monthlyTasks) {
+      let limitMessage: string;
+      if (user.subscription_plan === 'free') {
+        limitMessage = `🚫 **Monthly task limit reached!** (${user.tasks_this_month}/${planLimits?.monthlyTasks || 0})\n\n` +
+                      `Upgrade to **Pro** for 150 tasks/month:\n` +
+                      `🔗 [Subscribe Now](https://swe.pipilot.dev/setup?plan=pro_monthly)`;
+      } else {
+        limitMessage = `🚫 **Monthly task limit reached!** (${user.tasks_this_month}/${planLimits?.monthlyTasks || 0})\n\n` +
+                      `Buy **150 extra credits** for $30 ($0.20/credit):\n` +
+                      `🔗 [Buy Credits](https://swe.pipilot.dev/setup?plan=credits_150)`;
+      }
+      await createComment(installationId, repository.full_name, issue!.number, limitMessage);
+      return;
+    }
+
     // Prepare messages for chat API
     const messages = [{
       role: 'user' as const,
@@ -55,8 +86,12 @@ export async function handleIssueEvent(payload: WebhookEvent) {
       githubToken: await getInstallationToken(installationId),
       issueNumber: issue!.number,
       commentId: comment?.id,
-      isReply: !!comment?.id
+      isReply: !!comment?.id,
+      userId: user.id,
+      installationId
     });
+
+    // Usage increment now handled inside chat API after stream completes
 
     // AI handles commenting directly via tools - no manual posting needed
 
@@ -101,6 +136,35 @@ export async function handlePullRequestEvent(payload: WebhookEvent) {
     // Extract command (remove bot mention)
     const command = content.replace(new RegExp(`@${BOT_NAME}`, 'gi'), '').trim();
 
+    // Check user subscription and usage limits
+    const supabase = await createClient();
+    const { data: user } = await supabase
+      .from('users')
+      .select('id, subscription_plan, tasks_this_month')
+      .eq('github_username', sender.login)
+      .single();
+
+    if (!user) {
+      console.log('User not found in DB, skipping');
+      return;
+    }
+
+    const planLimits = PLAN_LIMITS[user.subscription_plan as keyof typeof PLAN_LIMITS];
+    if (!planLimits || user.tasks_this_month >= planLimits.monthlyTasks) {
+      let limitMessage: string;
+      if (user.subscription_plan === 'free') {
+        limitMessage = `🚫 **Monthly task limit reached!** (${user.tasks_this_month}/${planLimits?.monthlyTasks || 0})\n\n` +
+                      `Upgrade to **Pro** for 150 tasks/month:\n` +
+                      `🔗 [Subscribe Now](https://swe.pipilot.dev/setup?plan=pro_monthly)`;
+      } else {
+        limitMessage = `🚫 **Monthly task limit reached!** (${user.tasks_this_month}/${planLimits?.monthlyTasks || 0})\n\n` +
+                      `Buy **150 extra credits** for $30 ($0.20/credit):\n` +
+                      `🔗 [Buy Credits](https://swe.pipilot.dev/setup?plan=credits_150)`;
+      }
+      await createComment(installationId, repository.full_name, pull_request.number, limitMessage);
+      return;
+    }
+
     // Prepare messages for chat API
     const messages = [{
       role: 'user' as const,
@@ -113,10 +177,12 @@ export async function handlePullRequestEvent(payload: WebhookEvent) {
       repo: repository.full_name,
       branch: defaultBranch,
       githubToken: await getInstallationToken(installationId),
-      issueNumber: pull_request.number
+      issueNumber: pull_request.number,
+      userId: user.id,
+      installationId
     });
 
-    // AI handles commenting directly via tools
+    // Usage increment now handled inside chat API after stream completes
   } catch (error) {
     console.error('Error processing PR event:', error);
   }
@@ -157,6 +223,35 @@ export async function handlePullRequestReviewCommentEvent(payload: WebhookEvent)
     // Extract command (remove bot mention)
     const command = content.replace(new RegExp(`@${BOT_NAME}`, 'gi'), '').trim();
 
+    // Check user subscription and usage limits
+    const supabase = await createClient();
+    const { data: user } = await supabase
+      .from('users')
+      .select('id, subscription_plan, tasks_this_month')
+      .eq('github_username', comment.user.login)
+      .single();
+
+    if (!user) {
+      console.log('User not found in DB, skipping');
+      return;
+    }
+
+    const planLimits = PLAN_LIMITS[user.subscription_plan as keyof typeof PLAN_LIMITS];
+    if (!planLimits || user.tasks_this_month >= planLimits.monthlyTasks) {
+      let limitMessage: string;
+      if (user.subscription_plan === 'free') {
+        limitMessage = `🚫 **Monthly task limit reached!** (${user.tasks_this_month}/${planLimits?.monthlyTasks || 0})\n\n` +
+                      `Upgrade to **Pro** for 150 tasks/month:\n` +
+                      `🔗 [Subscribe Now](https://swe.pipilot.dev/setup?plan=pro_monthly)`;
+      } else {
+        limitMessage = `🚫 **Monthly task limit reached!** (${user.tasks_this_month}/${planLimits?.monthlyTasks || 0})\n\n` +
+                      `Buy **150 extra credits** for $30 ($0.20/credit):\n` +
+                      `🔗 [Buy Credits](https://swe.pipilot.dev/setup?plan=credits_150)`;
+      }
+      await createComment(installationId, repository.full_name, pull_request.number, limitMessage);
+      return;
+    }
+
     // Prepare messages for chat API
     const messages = [{
       role: 'user' as const,
@@ -169,10 +264,12 @@ export async function handlePullRequestReviewCommentEvent(payload: WebhookEvent)
       repo: repository.full_name,
       branch: defaultBranch,
       githubToken: await getInstallationToken(installationId),
-      issueNumber: pull_request.number
+      issueNumber: pull_request.number,
+      userId: user.id,
+      installationId
     });
 
-    // AI handles commenting directly via tools
+    // Usage increment now handled inside chat API after stream completes
 
   } catch (error) {
     console.error('Error processing PR review comment event:', error);
@@ -201,6 +298,8 @@ async function callChatAPI(params: {
   issueNumber?: number;
   commentId?: number;
   isReply?: boolean;
+  userId: string;
+  installationId: number;
 }) {
   try {
     const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/chat`, {

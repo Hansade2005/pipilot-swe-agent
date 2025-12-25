@@ -6,6 +6,8 @@ import { NextResponse } from 'next/server'
 import { Octokit } from '@octokit/rest'
 import { getOptimizedFileContext, getStagedChanges, getFileContent, applyIncrementalEdits } from './helpers'
 import JSZip from 'jszip'
+import { createClient } from '@/lib/supabase/server'
+import { stripe } from '@/lib/stripe'
 
 // Tavily API configuration for web search
 const tavilyConfig = {
@@ -598,6 +600,11 @@ export async function POST(req: Request) {
   let currentRepo: string | undefined
   let currentBranch: string = 'main'
   let githubToken: string | undefined
+  let userId: string | undefined
+  let installationId: number | undefined
+  
+  // Add Supabase client for usage tracking
+  const supabase = await createClient()
 
   console.log(`[RepoAgent:${requestId.slice(0, 8)}] 🚀 Incoming POST request at ${new Date().toISOString()}`)
 
@@ -616,7 +623,9 @@ export async function POST(req: Request) {
         modelId,
         repo: currentRepo,
         branch: currentBranch = 'main',
-        githubToken
+        githubToken,
+        userId,
+        installationId
       } = body)
 
 
@@ -764,8 +773,18 @@ Remember: Your responses must appear as comments on GitHub issues/PRs, not as te
             try {
               // Read current file content for incremental editing
               const currentContent = await getFileContent(octokit, owner, repo, path, currentBranch)
-              finalContent = applyIncrementalEdits(currentContent, edit_operations)
-              console.log(`[RepoAgent] Applied ${edit_operations.length} incremental edits to ${path}`)
+              
+              // Create a new array with properly typed operations
+              const validOperations = edit_operations
+                .filter(op => op.old_string && op.new_string)
+                .map(op => ({
+                  old_string: op.old_string!,
+                  new_string: op.new_string!,
+                  context_lines: op.context_lines
+                }))
+              
+              finalContent = applyIncrementalEdits(currentContent, validOperations)
+              console.log(`[RepoAgent] Applied ${validOperations.length} incremental edits to ${path}`)
             } catch (error) {
               console.error(`[RepoAgent] Failed to apply incremental edits to ${path}:`, error)
               const errorMessage = error instanceof Error ? error.message : String(error)
@@ -916,6 +935,59 @@ Remember: Your responses must appear as comments on GitHub issues/PRs, not as te
             return { success: true, message: `Branch ${branch} deleted` }
           } catch (error) {
             return { success: false, error: `Failed to delete branch: ${error}` }
+          }
+        }
+      }),
+
+      github_update_issue_labels: tool({
+        description: 'Update labels on a GitHub issue - add, remove, or replace labels',
+        inputSchema: z.object({
+          repo: z.string().describe('Repository in format "owner/repo"'),
+          issue_number: z.number().describe('Issue or PR number'),
+          action: z.enum(['add', 'remove', 'replace']).describe('Action to perform: add (add to existing), remove (remove from existing), replace (replace all)'),
+          labels: z.array(z.string()).describe('Labels to add, remove, or replace with')
+        }),
+        execute: async ({ repo, issue_number, action, labels }) => {
+          try {
+            const { owner, repo: repoName } = parseRepoString(repo)
+            
+            if (action === 'add') {
+              // Add labels to the issue
+              await octokit.rest.issues.addLabels({
+                owner,
+                repo: repoName,
+                issue_number,
+                labels
+              })
+              return { success: true, message: `Added labels to issue #${issue_number}: ${labels.join(', ')}` }
+            } else if (action === 'remove') {
+              // Remove each label individually
+              for (const label of labels) {
+                try {
+                  await octokit.rest.issues.removeLabel({
+                    owner,
+                    repo: repoName,
+                    issue_number,
+                    name: label
+                  })
+                } catch (error) {
+                  // Label might not exist on the issue, continue with next label
+                  console.log(`Label ${label} not found on issue #${issue_number}, skipping...`)
+                }
+              }
+              return { success: true, message: `Removed labels from issue #${issue_number}: ${labels.join(', ')}` }
+            } else if (action === 'replace') {
+              // Replace all labels with the new set
+              await octokit.rest.issues.update({
+                owner,
+                repo: repoName,
+                issue_number,
+                labels
+              })
+              return { success: true, message: `Replaced labels on issue #${issue_number} with: ${labels.join(', ')}` }
+            }
+          } catch (error) {
+            return { success: false, error: `Failed to update labels: ${error instanceof Error ? error.message : 'Unknown error'}` }
           }
         }
       }),
@@ -3803,6 +3875,68 @@ Remember: Your responses must appear as comments on GitHub issues/PRs, not as te
       onFinish: async (result) => {
         const responseTime = Date.now() - startTime
         console.log(`[RepoAgent:${requestId.slice(0, 8)}] ✅ Stream finished in ${responseTime}ms - Total tokens: ${result.usage.totalTokens}`)
+        
+        // Track usage after request completion
+        try {
+          if (userId && installationId) {
+            // Increment tasks_this_month for the user
+            await supabase
+              .from('users')
+              .update({ tasks_this_month: supabase.raw('tasks_this_month + 1') })
+              .eq('id', userId);
+
+            // Get repository information
+            const [owner, repo] = currentRepo.split('/');
+            const { data: repoInfo } = await octokit.rest.repos.get({
+              owner,
+              repo
+            });
+            
+            // Get or create repository in DB
+            let repoId: number | undefined;
+            const { data: existingRepo } = await supabase
+              .from('repositories')
+              .select('id')
+              .eq('github_repo_id', repoInfo.id)
+              .single();
+            
+            if (!existingRepo) {
+              const { data: newRepo } = await supabase
+                .from('repositories')
+                .insert({
+                  github_repo_id: repoInfo.id,
+                  installation_id: installationId,
+                  name: repoInfo.name,
+                  full_name: repoInfo.full_name,
+                  private: repoInfo.private
+                })
+                .select('id')
+                .single();
+              
+              repoId = newRepo?.id;
+            } else {
+              repoId = existingRepo.id;
+            }
+            
+            // Log usage to database
+            await supabase.from('usage_logs').insert({
+              user_id: userId,
+              installation_id: installationId,
+              repo_id: repoId,
+              request_type: 'chat',
+              input_tokens: result.usage.promptTokens || 0,
+              output_tokens: result.usage.completionTokens || 0,
+              total_tokens: result.usage.totalTokens || 0,
+              request_metadata: {
+                model: modelId,
+                response_time: responseTime,
+                request_id: requestId
+              }
+            });
+          }
+        } catch (usageError) {
+          console.error(`[RepoAgent:${requestId.slice(0, 8)}] ❌ Usage tracking error:`, usageError)
+        }
       }
     })
 
