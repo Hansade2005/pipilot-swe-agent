@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { Github, Twitter, Zap } from "lucide-react"
+import { Logo } from "@/app/components/ui/logo"
 
 export function Footer() {
   return (
@@ -7,11 +8,8 @@ export function Footer() {
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="col-span-1">
-            <div className="flex items-center space-x-2 mb-4">
-              <div className="w-8 h-8 rounded-lg bg-purple-600 flex items-center justify-center">
-                <Zap className="w-5 h-5 text-white" />
-              </div>
-              <span className="text-xl font-bold text-white">PiPilot SWE Agent</span>
+            <div className="mb-4">
+              <Logo variant="text" size="md" showSubtitle={false} />
             </div>
             <p className="text-gray-400 text-sm">
               AI-powered software development assistant for GitHub. Transform ideas into code with intelligent automation.
