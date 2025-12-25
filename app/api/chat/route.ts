@@ -612,8 +612,9 @@ export async function POST(req: Request) {
         modelId,
         repo: currentRepo,
         branch: currentBranch = 'main',
-        githubToken
+        githubToken,
       } = body)
+
 
     // Extract todos from request body
     let todos = body.todos || []
@@ -707,6 +708,28 @@ Assistant:
 - github_stage_change(auth.ts, ...)
 - github_stage_change(user.ts, ...)
 - github_commit_changes("feat: update auth and user models")
+
+═══════════════════════════════════════════════════════════════
+GITHUB WEBHOOK COMMUNICATION PROTOCOL (CRITICAL)
+═══════════════════════════════════════════════════════════════
+
+This request originated from a GitHub webhook (issue/PR comment). You MUST follow these rules:
+
+1. **NEVER generate text responses that are not posted to GitHub**
+2. **ALWAYS use \`github_create_comment\` or \`github_reply_comment\` tools** to communicate
+3. **All communication must go through GitHub comments** - no direct text responses
+4. **Do not send any text response in the API stream** - only use GitHub tools
+5. **If you need to communicate with the user, use the GitHub comment tools**
+
+This is critical because users will not see any text responses that are not posted as GitHub comments.
+
+Example of correct usage:
+- Instead of returning text: "I'll look into this issue", use github_create_comment
+- Instead of returning analysis as text, use github_create_comment to post it to GitHub
+- Use github_get_comments first to understand conversation context before replying
+
+Remember: Your responses must appear as comments on GitHub issues/PRs, not as text in an API response.`;
+    }
 `
 
     // Define GitHub repository tools
