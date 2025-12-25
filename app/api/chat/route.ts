@@ -612,8 +612,9 @@ export async function POST(req: Request) {
         modelId,
         repo: currentRepo,
         branch: currentBranch = 'main',
-        githubToken,
+        githubToken
       } = body)
+
 
 
     // Extract todos from request body
@@ -669,7 +670,7 @@ export async function POST(req: Request) {
     const baseSystemPrompt = getRepoAgentSystemPrompt(modelId || DEFAULT_CHAT_MODEL)
 
     // Enhanced System Prompt
-    const systemPrompt = `${baseSystemPrompt}
+    let systemPrompt = `${baseSystemPrompt}
 
 ═══════════════════════════════════════════════════════════════
 CONTEXT & STATE
@@ -707,13 +708,16 @@ User: "Update auth.ts and user.ts"
 Assistant:
 - github_stage_change(auth.ts, ...)
 - github_stage_change(user.ts, ...)
-- github_commit_changes("feat: update auth and user models")
+- github_commit_changes("feat: update auth and user models")`;
+
+    // Add GitHub communication protocol - all requests are from GitHub context
+    systemPrompt += `
 
 ═══════════════════════════════════════════════════════════════
-GITHUB WEBHOOK COMMUNICATION PROTOCOL (CRITICAL)
+GITHUB COMMUNICATION PROTOCOL (CRITICAL)
 ═══════════════════════════════════════════════════════════════
 
-This request originated from a GitHub webhook (issue/PR comment). You MUST follow these rules:
+This system is designed to power a GitHub bot app. You MUST follow these rules:
 
 1. **NEVER generate text responses that are not posted to GitHub**
 2. **ALWAYS use \`github_create_comment\` or \`github_reply_comment\` tools** to communicate
@@ -729,8 +733,6 @@ Example of correct usage:
 - Use github_get_comments first to understand conversation context before replying
 
 Remember: Your responses must appear as comments on GitHub issues/PRs, not as text in an API response.`;
-    }
-`
 
     // Define GitHub repository tools
     const tools = {
