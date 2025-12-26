@@ -83,7 +83,7 @@ export default function SetupForm() {
   const handleOAuth = () => {
     const state = btoa(JSON.stringify({ installation_id: installationId, setup_action: setupAction }));
     const clientId = process.env.GITHUB_CLIENT_ID;
-    window.location.href = `https://github.com/login/oauth/authorize?client_id=${clientId}&scope=user&state=${state}`;
+    window.location.href = `https://github.com/login/oauth/authorize?client_id=Iv23lis7OreTbIdP6zzJ&scope=user&state=${state}`;
   };
 
   const handleSubscribe = async () => {

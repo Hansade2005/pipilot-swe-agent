@@ -183,7 +183,7 @@ export default function SetupPage() {
 
           <div className="hidden md:flex items-center gap-8">
             <Link href="/" className="text-sm font-medium text-gray-400 hover:text-white transition-colors">Home</Link>
-            <Link href="/#plans" className="text-sm font-medium text-gray-400 hover:text-white transition-colors">Plans</Link>
+            <Link href="/#pricing" className="text-sm font-medium text-gray-400 hover:text-white transition-colors">Plans</Link>
             <Link href="/#features" className="text-sm font-medium text-gray-400 hover:text-white transition-colors">Features</Link>
             <Link href="https://pipilot.dev/docs" className="text-sm font-medium text-gray-400 hover:text-white transition-colors">Docs</Link>
           </div>
@@ -244,11 +244,7 @@ export default function SetupPage() {
               <Reveal>
                 <div className="flex items-center justify-center mb-8">
                   <div className="relative inline-block">
-                    <div className="absolute inset-0 bg-gradient-to-r from-purple-600 via-pink-600 to-cyan-600 rounded-3xl blur-2xl opacity-50 animate-pulse" />
-                    
-                      <Logo variant="icon" size="md" className=" w-24 h-24" />
-                    
-                  </div>
+             <img src="/logo.png" alt="PiPilot Logo" className=" w-28 h-28" /></div>
                 </div>
               </Reveal>
 

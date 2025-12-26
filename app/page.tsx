@@ -390,12 +390,16 @@ export default function Home() {
               </div>
             </Reveal>
 
-            <Reveal delay={0.1}>
-              <h1 className="text-6xl md:text-8xl lg:text-9xl font-display font-bold tracking-tighter mb-6 leading-[0.9]">
-                <span className="block text-transparent bg-clip-text bg-gradient-to-r from-white via-gray-200 to-gray-500">Autonomous</span>
-                <span className="block text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 mt-2">SWE Agent</span><br/>
-              </h1>
-            </Reveal>
+        <Reveal delay={0.1}>
+  <h1 className="text-6xl md:text-8xl lg:text-9xl font-display font-bold tracking-tighter mb-6 leading-tight">
+    <span className="block text-transparent bg-clip-text bg-gradient-to-r from-white via-gray-200 to-gray-500">
+      Autonomous
+    </span>
+    <span className="block pb-1 text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 mt-2">
+      SWE Agent
+    </span>
+  </h1>
+</Reveal>
 
             <Reveal delay={0.2}>
               <div className="h-8 mb-8">
@@ -694,102 +698,149 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Pricing Section */}
-        <section id="pricing" className="py-32 relative">
-          <div className="container mx-auto px-6">
-            <Reveal>
-              <div className="text-center mb-16">
-                <span className="text-cyan-400 font-mono text-sm tracking-widest uppercase mb-2 block">Simple Pricing</span>
-                <h2 className="text-4xl md:text-6xl font-display font-bold text-white mb-4">Choose Your Plan</h2>
-                <p className="text-gray-400 max-w-2xl mx-auto">Start free and scale as you grow. All plans include full access to our AI SWE Agent.</p>
+       {/* Pricing Section */}
+<section id="pricing" className="py-32 relative">
+  <div className="container mx-auto px-6">
+    <Reveal>
+      <div className="text-center mb-16">
+        <span className="text-cyan-400 font-mono text-sm tracking-widest uppercase mb-2 block">
+          Simple Pricing
+        </span>
+        <h2 className="text-4xl md:text-6xl font-display font-bold text-white mb-4">
+          Choose Your Plan
+        </h2>
+        <p className="text-gray-400 max-w-2xl mx-auto">
+          Start free and scale as you grow. All plans include full access to our AI SWE Agent.
+        </p>
+      </div>
+    </Reveal>
+
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+      {[
+        {
+          name: "Free",
+          price: "$0",
+          period: "forever",
+          description: "Perfect for getting started",
+          features: [
+            "10 tasks/month",
+            "Basic AI models",
+            "Community support",
+            "GitHub integration"
+          ],
+          cta: "Get Started Free",
+          popular: false
+        },
+        {
+          name: "Pro",
+          price: "$30",
+          period: "per month",
+          description: "Most popular for teams",
+          features: [
+            "150 tasks/month",
+            "Premium AI models",
+            "Priority support",
+            "Advanced integrations",
+            "Custom templates",
+            "API access"
+          ],
+          cta: "Start Pro Trial",
+          popular: true
+        },
+        {
+          name: "Enterprise",
+          price: "Custom",
+          period: "pricing",
+          description: "For large organizations",
+          features: [
+            "Unlimited tasks",
+            "Dedicated support",
+            "Custom integrations",
+            "SLA guarantee",
+            "On-premise deployment",
+            "Advanced security"
+          ],
+          cta: "Contact Sales",
+          popular: false
+        }
+      ].map((plan, i) => (
+        <Reveal key={i} delay={i * 0.1}>
+          <TiltCard
+            className={`relative overflow-visible h-full p-8 rounded-3xl border transition-all duration-300 group ${
+              plan.popular
+                ? 'bg-gradient-to-b from-purple-900/20 to-cyan-900/20 border-purple-500/50 shadow-2xl shadow-purple-500/10 md:-translate-y-2'
+                : 'bg-white/5 border-white/10 hover:border-white/20'
+            }`}
+          >
+            {/* Most Popular Badge */}
+            {plan.popular && (
+              <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-20">
+                <span className="bg-gradient-to-r from-purple-600 to-cyan-600 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg">
+                  Most Popular
+                </span>
               </div>
-            </Reveal>
+            )}
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-              {[
-                {
-                  name: "Free",
-                  price: "$0",
-                  period: "forever",
-                  description: "Perfect for getting started",
-                  features: ["10 tasks/month", "Basic AI models", "Community support", "GitHub integration"],
-                  cta: "Get Started Free",
-                  popular: false
-                },
-                {
-                  name: "Pro",
-                  price: "$30",
-                  period: "per month",
-                  description: "Most popular for teams",
-                  features: ["150 tasks/month", "Premium AI models", "Priority support", "Advanced integrations", "Custom templates", "API access"],
-                  cta: "Start Pro Trial",
-                  popular: true
-                },
-                {
-                  name: "Enterprise",
-                  price: "Custom",
-                  period: "pricing",
-                  description: "For large organizations",
-                  features: ["Unlimited tasks", "Dedicated support", "Custom integrations", "SLA guarantee", "On-premise deployment", "Advanced security"],
-                  cta: "Contact Sales",
-                  popular: false
-                }
-              ].map((plan, i) => (
-                <Reveal key={i} delay={i * 0.1}>
-                  <TiltCard className={`relative h-full p-8 rounded-3xl border transition-all duration-300 group ${
-                    plan.popular 
-                      ? 'bg-gradient-to-b from-purple-900/20 to-cyan-900/20 border-purple-500/50 shadow-2xl shadow-purple-500/10' 
-                      : 'bg-white/5 border-white/10 hover:border-white/20'
-                  }`}>
-                    {plan.popular && (
-                      <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                        <span className="bg-gradient-to-r from-purple-600 to-cyan-600 text-white px-4 py-2 rounded-full text-sm font-bold">
-                          Most Popular
-                        </span>
-                      </div>
-                    )}
-
-                    <div className="text-center mb-8">
-                      <h3 className="text-2xl font-bold text-white mb-2">{plan.name}</h3>
-                      <div className="flex items-baseline justify-center gap-1 mb-2">
-                        <span className="text-4xl font-bold text-white">{plan.price}</span>
-                        <span className="text-gray-400">{plan.period}</span>
-                      </div>
-                      <p className="text-gray-400 text-sm">{plan.description}</p>
-                    </div>
-
-                    <ul className="space-y-4 mb-8">
-                      {plan.features.map((feature, idx) => (
-                        <li key={idx} className="flex items-center gap-3">
-                          <CheckCircle className="w-5 h-5 text-green-400 flex-shrink-0" />
-                          <span className="text-gray-300 text-sm">{feature}</span>
-                        </li>
-                      ))}
-                    </ul>
-
-                    <Link href="/setup" className="block w-full">
-                      <button className={`w-full py-3 px-6 rounded-xl font-semibold transition-all duration-300 ${
-                        plan.popular
-                          ? 'bg-gradient-to-r from-purple-600 to-cyan-600 text-white hover:shadow-lg hover:shadow-purple-500/25'
-                          : 'bg-white/10 text-white hover:bg-white/20 border border-white/20'
-                      }`}>
-                        {plan.cta}
-                      </button>
-                    </Link>
-                  </TiltCard>
-                </Reveal>
-              ))}
+            {/* Header */}
+            <div className="text-center mb-8">
+              <h3 className="text-2xl font-bold text-white mb-2">
+                {plan.name}
+              </h3>
+              <div className="flex items-baseline justify-center gap-1 mb-2">
+                <span className="text-4xl font-bold text-white">
+                  {plan.price}
+                </span>
+                <span className="text-gray-400">
+                  {plan.period}
+                </span>
+              </div>
+              <p className="text-gray-400 text-sm">
+                {plan.description}
+              </p>
             </div>
 
-            <Reveal delay={0.4}>
-              <div className="text-center mt-12">
-                <Link href="/setup" className="text-cyan-400 hover:text-cyan-300 transition-colors text-sm font-medium">
-                  View detailed pricing and plans →
-                </Link>
-              </div>
-            </Reveal>
-          </div>
-        </section>
+            {/* Features */}
+            <ul className="space-y-4 mb-8">
+              {plan.features.map((feature, idx) => (
+                <li key={idx} className="flex items-center gap-3">
+                  <CheckCircle className="w-5 h-5 text-green-400 flex-shrink-0" />
+                  <span className="text-gray-300 text-sm">
+                    {feature}
+                  </span>
+                </li>
+              ))}
+            </ul>
+
+            {/* CTA */}
+            <Link href="/setup" className="block w-full">
+              <button
+                className={`w-full py-3 px-6 rounded-xl font-semibold transition-all duration-300 ${
+                  plan.popular
+                    ? 'bg-gradient-to-r from-purple-600 to-cyan-600 text-white hover:shadow-lg hover:shadow-purple-500/25'
+                    : 'bg-white/10 text-white hover:bg-white/20 border border-white/20'
+                }`}
+              >
+                {plan.cta}
+              </button>
+            </Link>
+          </TiltCard>
+        </Reveal>
+      ))}
+    </div>
+
+    <Reveal delay={0.4}>
+      <div className="text-center mt-12">
+        <Link
+          href="/setup"
+          className="text-cyan-400 hover:text-cyan-300 transition-colors text-sm font-medium"
+        >
+          View detailed pricing and plans →
+        </Link>
+      </div>
+    </Reveal>
+  </div>
+</section>
+
 
         {/* CTA Section */}
         <section className="py-32 relative">
@@ -805,7 +856,7 @@ export default function Home() {
                     Get Started for Free
                   </button>
                 </Link>
-                <Link href="mailto:sales@pipilot.ai">
+                <Link href="https://pipilot.dev/enterprise">
                   <button className="px-8 py-4 bg-white/5 text-white font-medium rounded-full hover:bg-white/10 transition-colors border border-white/10 backdrop-blur-sm">
                     Contact Sales
                   </button>
