@@ -66,25 +66,42 @@ export default function SetupForm() {
 
   // If OAuth is enabled, get user info from token
   useEffect(() => {
-    const token = localStorage.getItem('github_token');
-    if (token) {
-      // Fetch user info from GitHub API
+    // Check if token came from OAuth callback in URL
+    const tokenFromUrl = searchParams.get('github_token');
+    if (tokenFromUrl) {
+      // Store token in localStorage for persistence
+      localStorage.setItem('github_token', tokenFromUrl);
+      // Set user from URL params
+      const userId = searchParams.get('user_id');
+      if (userId) {
+        setUser({ login: userId });
+      }
+      // Fetch full user info from GitHub API
       fetch('https://api.github.com/user', {
-        headers: { Authorization: `token ${token}` },
+        headers: { Authorization: `token ${tokenFromUrl}` },
       })
         .then(res => res.json())
         .then(setUser)
         .catch(console.error);
-    } else if (searchParams.get('user_id')) {
-      // User identified via OAuth callback
-      setUser({ login: searchParams.get('user_id') });
+    } else {
+      // Check localStorage for existing token
+      const token = localStorage.getItem('github_token');
+      if (token) {
+        // Fetch user info from GitHub API
+        fetch('https://api.github.com/user', {
+          headers: { Authorization: `token ${token}` },
+        })
+          .then(res => res.json())
+          .then(setUser)
+          .catch(console.error);
+      }
     }
   }, [searchParams]);
 
   const handleOAuth = () => {
     const state = btoa(JSON.stringify({ installation_id: installationId, setup_action: setupAction }));
     const clientId = process.env.GITHUB_CLIENT_ID;
-    window.location.href = `https://github.com/login/oauth/authorize?client_id=Iv23lis7OreTbIdP6zzJ&scope=user&state=${state}`;
+    window.location.href = `https://github.com/login/oauth/authorize?client_id=Iv23lis7OreTbIdP6zzJ&scope=user%20user:email&state=${state}`;
   };
 
   const handleSubscribe = async () => {

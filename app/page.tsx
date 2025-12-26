@@ -1,9 +1,10 @@
 "use client";
 import React, { useEffect, useState, useRef, MouseEvent } from 'react';
 import Link from 'next/link';
-import { 
-  Rocket, CheckCircle, Bot, Code, Shield, Github, 
-  Layers, Sparkles, ArrowRight, Terminal, Bug, Brain, ChevronRight 
+import {
+  Rocket, CheckCircle, Bot, Code, Shield, Github,
+  Layers, Sparkles, ArrowRight, Terminal, Bug, Brain, ChevronRight,
+  GitPullRequest, BookOpen, Play, AlertCircle // Added new icons
 } from 'lucide-react';
 import { motion, useScroll, useTransform, useInView } from 'framer-motion';
 
@@ -23,7 +24,7 @@ const CustomCursor = () => {
     const removeHoverListeners = () => setIsHovered(false);
 
     document.addEventListener('mousemove', handleMouseMove as any);
-    
+
     const clickables = document.querySelectorAll('a, button, .tilt-card');
     clickables.forEach(el => {
       el.addEventListener('mouseenter', addHoverListeners);
@@ -41,11 +42,11 @@ const CustomCursor = () => {
 
   return (
     <>
-      <div 
+      <div
         className="fixed top-0 left-0 w-2 h-2 bg-cyan-400 rounded-full pointer-events-none z-[9999] mix-blend-difference"
         style={{ transform: `translate(${position.x}px, ${position.y}px)` }}
       />
-      <motion.div 
+      <motion.div
         className="fixed top-0 left-0 w-10 h-10 border border-purple-500/50 rounded-full pointer-events-none z-[9999]"
         animate={{
           x: position.x - 20,
@@ -69,7 +70,7 @@ const NeuralBackground = () => {
     const ctx = canvas.getContext('2d');
     let width = canvas.width = window.innerWidth;
     let height = canvas.height = window.innerHeight;
-    
+
     let particles: any[] = [];
     const particleCount = Math.min(window.innerWidth / 10, 60);
 
@@ -80,7 +81,7 @@ const NeuralBackground = () => {
       vy: number;
       size: number;
       color: string;
-      
+
       constructor() {
         this.x = Math.random() * width;
         this.y = Math.random() * height;
@@ -118,7 +119,7 @@ const NeuralBackground = () => {
           const distance = Math.sqrt(dx * dx + dy * dy);
           if (distance < 150) {
             ctx!.beginPath();
-            ctx!.strokeStyle = `rgba(255, 255, 255, ${0.05 - distance/3000})`;
+            ctx!.strokeStyle = `rgba(255, 255, 255, ${0.05 - distance / 3000})`;
             ctx!.lineWidth = 0.5;
             ctx!.moveTo(particles[i].x, particles[i].y);
             ctx!.lineTo(particles[j].x, particles[j].y);
@@ -150,7 +151,7 @@ const useTypingEffect = (phrases: string[], speed = 100, delay = 2000) => {
 
   useEffect(() => {
     const currentPhrase = phrases[phraseIndex];
-    
+
     const timeout = setTimeout(() => {
       if (paused) {
         setPaused(false);
@@ -191,7 +192,7 @@ const TiltCard = ({ children, className }: { children: React.ReactNode, classNam
     const y = e.clientY - rect.top;
     const centerX = rect.width / 2;
     const centerY = rect.height / 2;
-    
+
     const rotateXVal = ((y - centerY) / centerY) * -5;
     const rotateYVal = ((x - centerX) / centerX) * 5;
 
@@ -205,7 +206,7 @@ const TiltCard = ({ children, className }: { children: React.ReactNode, classNam
   };
 
   return (
-    <div 
+    <div
       ref={ref}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
@@ -250,10 +251,10 @@ export default function Home() {
   ]);
 
   // Modal state for image preview
-  const [selectedImage, setSelectedImage] = useState<{src: string, title: string, desc: string} | null>(null);
+  const [selectedImage, setSelectedImage] = useState<{ src: string, title: string, desc: string } | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const openModal = (image: {src: string, title: string, desc: string}) => {
+  const openModal = (image: { src: string, title: string, desc: string }) => {
     setSelectedImage(image);
     setIsModalOpen(true);
   };
@@ -275,134 +276,96 @@ export default function Home() {
     return () => document.removeEventListener('keydown', handleEscape);
   }, [isModalOpen]);
 
-  // Simulation state for GitHub demo
-  const [issueCreated, setIssueCreated] = useState(false);
-  const [commentText, setCommentText] = useState('@pipilot-swe-agent Generate a user auth API with login and tests');
-  const [botStatus, setBotStatus] = useState<'idle' | 'thinking' | 'responded'>('idle');
-  const [botComments, setBotComments] = useState<string[]>([]);
-  const [prCreated, setPrCreated] = useState(false);
-  const [prMerged, setPrMerged] = useState(false);
-  const [activeTab, setActiveTab] = useState<'issue' | 'pr'>('issue');
+  // --- NEW REALISTIC SIMULATION LOGIC ---
+
+  // Simulation Steps:
+  // 0: Idle
+  // 1: Issue Created
+  // 2: Bot Analyzing
+  // 3: Bot Plan
+  // 4: Bot Complete (PR Created)
+  // 5: Viewing PR List
+  // 6: Viewing PR Detail (Conversation Tab)
+  // 7: Viewing PR Detail (Files Changed Tab)
+  // 8: Merged
+  const [step, setStep] = useState(0);
+  const [currentView, setCurrentView] = useState<'issue' | 'pr-list' | 'pr-detail'>('issue');
+  const [activeTab, setActiveTab] = useState<'conversation' | 'files'>('conversation');
+  const [botTyping, setBotTyping] = useState(false);
+  const [typingText, setTypingText] = useState("");
+  const [comments, setComments] = useState<any[]>([]);
   const [isAutoPlaying, setIsAutoPlaying] = useState(false);
-  const [typingComment, setTypingComment] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
-  const [showDiffViewer, setShowDiffViewer] = useState(false);
 
-  // Typing animation helper
-  const typeText = (text: string, callback: (currentText: string) => void, onComplete?: () => void) => {
-    setIsTyping(true);
-    let index = 0;
-    const speed = 30; // milliseconds per character
-    
-    const interval = setInterval(() => {
-      if (index <= text.length) {
-        callback(text.slice(0, index));
-        index++;
-      } else {
-        clearInterval(interval);
-        setIsTyping(false);
-        if (onComplete) onComplete();
-      }
-    }, speed);
-  };
-
-  const simulateCreateIssue = () => {
-    setIssueCreated(true);
-    setBotStatus('idle');
-    setBotComments([]);
-    setPrCreated(false);
-    setPrMerged(false);
-    setActiveTab('issue');
-    setShowDiffViewer(false);
-    setTypingComment('');
-  };
-
-  const simulateAddComment = () => {
-    if (!commentText || isTyping) return;
-    
-    // Simulate bot thinking
-    setBotStatus('thinking');
-    
-    setTimeout(() => {
-      // Type out first bot comment
-      const firstComment = "PiPilot SWE Agent is analyzing the request...";
-      typeText(firstComment, setTypingComment, () => {
-        setBotComments(prev => [...prev, firstComment]);
-        setTypingComment('');
-        
-        // Wait a bit, then type second comment
-        setTimeout(() => {
-          const secondComment = "I've analyzed the codebase structure and dependencies. Creating implementation files...";
-          typeText(secondComment, setTypingComment, () => {
-            setBotComments(prev => [...prev, secondComment]);
-            setTypingComment('');
-            
-            // Wait again, then type final comment
-            setTimeout(() => {
-              const thirdComment = "✓ Pull request created with full implementation: 'feature/auth-jwt' (#403).";
-              typeText(thirdComment, setTypingComment, () => {
-                setBotComments(prev => [...prev, thirdComment]);
-                setTypingComment('');
-                setBotStatus('responded');
-                setPrCreated(true);
-              });
-            }, 800);
-          });
-        }, 1200);
-      });
-    }, 1000);
-  };
-
-  const simulateViewPR = () => {
-    if (prCreated) {
-      setActiveTab('pr');
-      setTimeout(() => setShowDiffViewer(true), 300);
-    }
-  };
-
-  const simulateMergePR = () => {
-    if (!prCreated || isTyping) return;
-    setPrMerged(true);
-    
-    const mergeComment = "✓ Pull request merged successfully — deployment pipeline initiated.";
-    typeText(mergeComment, setTypingComment, () => {
-      setBotComments(prev => [...prev, mergeComment]);
-      setTypingComment('');
+  // Helper to add comments
+  const addBotComment = (text: string, type: 'text' | 'plan' = 'text', delay: number = 0) => {
+    return new Promise<void>((resolve) => {
+      setTimeout(() => {
+        setBotTyping(true);
+        setTypingText("");
+        let i = 0;
+        const interval = setInterval(() => {
+          setTypingText(text.slice(0, i));
+          i++;
+          if (i > text.length) {
+            clearInterval(interval);
+            setBotTyping(false);
+            setComments((prev) => [...prev, { role: 'bot', text, type }]);
+            resolve();
+          }
+        }, 20); // Fast typing
+      }, delay);
     });
   };
 
-  // Auto-play demo function
-  const autoPlayDemo = () => {
+  const runSimulation = async () => {
     setIsAutoPlaying(true);
-    
-    // Step 1: Create issue
-    simulateCreateIssue();
-    
-    setTimeout(() => {
-      // Step 2: Add comment
-      simulateAddComment();
-      
-      setTimeout(() => {
-        // Step 3: View PR (wait for bot to finish)
-        simulateViewPR();
-        
-        setTimeout(() => {
-          // Step 4: Merge PR
-          simulateMergePR();
-          setIsAutoPlaying(false);
-        }, 2500);
-      }, 6000); // Wait for bot responses to complete
-    }, 1500);
+    setStep(1);
+    setCurrentView('issue');
+    setComments([]);
+
+    // Scene 1: Issue Created
+    await new Promise(r => setTimeout(r, 1000));
+
+    // Scene 2: Bot Analysis & Plan
+    await addBotComment("I'm analyzing the codebase structure and dependencies for JWT authentication...", 'text');
+    await new Promise(r => setTimeout(r, 800));
+    await addBotComment("Here is the implementation plan:\n- Create `auth/middleware.js`\n- Add login endpoint in `routes/login.js`\n- Write tests in `tests/auth.test.js`", 'plan');
+
+    // Scene 3: Completion
+    await new Promise(r => setTimeout(r, 1500));
+    await addBotComment("✅ Implementation complete. Created PR #403 with full changes.", 'text');
+
+    // Scene 4: Navigate to PR List
+    await new Promise(r => setTimeout(r, 1500));
+    setCurrentView('pr-list');
+
+    // Scene 5: Open PR
+    await new Promise(r => setTimeout(r, 2000));
+    setCurrentView('pr-detail');
+    setActiveTab('conversation');
+
+    // Scene 6: Switch to Files
+    await new Promise(r => setTimeout(r, 2500));
+    setActiveTab('files');
+
+    // Scene 7: Back to Conversation
+    await new Promise(r => setTimeout(r, 4000));
+    setActiveTab('conversation');
+
+    // Scene 8: Merge
+    await new Promise(r => setTimeout(r, 2000));
+    setStep(8); // Merged State
+    setIsAutoPlaying(false);
   };
 
   return (
     <div className="min-h-screen bg-[#030305] text-white overflow-x-hidden selection:bg-purple-500 selection:text-white font-sans">
       <CustomCursor />
       <NeuralBackground />
-      
+
       {/* Background Grid Overlay */}
-      <div className="fixed inset-0 pointer-events-none z-[-1] bg-grid opacity-20" 
-           style={{backgroundImage: `linear-gradient(to right, rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.05) 1px, transparent 1px)`, backgroundSize: '40px 40px'}} 
+      <div className="fixed inset-0 pointer-events-none z-[-1] bg-grid opacity-20"
+        style={{ backgroundImage: `linear-gradient(to right, rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.05) 1px, transparent 1px)`, backgroundSize: '40px 40px' }}
       />
 
       {/* Image Preview Modal */}
@@ -471,10 +434,10 @@ export default function Home() {
       <nav className="fixed top-0 w-full z-50 transition-all duration-300 py-6 backdrop-blur-md bg-black/30 border-b border-white/5">
         <div className="container mx-auto px-6 flex justify-between items-center">
           <Link href="#" className="flex items-center gap-2 group">
-             <img src="/logo.png" alt="PiPilot Logo" className=" w-12 h-12" />
+            <img src="/logo.png" alt="PiPilot Logo" className=" w-12 h-12" />
             <span className="font-display font-bold text-xl tracking-tight text-white">PiPilot</span>
           </Link>
-          
+
           <div className="hidden md:flex items-center gap-8">
             <Link href="#features" className="text-sm font-medium text-gray-400 hover:text-white transition-colors">Features</Link>
             <Link href="#workflow" className="text-sm font-medium text-gray-400 hover:text-white transition-colors">Workflow</Link>
@@ -497,7 +460,7 @@ export default function Home() {
         <section className="relative min-h-screen flex items-center justify-center pt-20 overflow-hidden">
           {/* Decorative Glows */}
           <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-purple-600/20 rounded-full blur-[120px] animate-pulse" />
-          <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-cyan-600/20 rounded-full blur-[100px] animate-pulse" style={{animationDelay: '1.5s'}} />
+          <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-cyan-600/20 rounded-full blur-[100px] animate-pulse" style={{ animationDelay: '1.5s' }} />
 
           <div className="container mx-auto px-6 relative z-10 text-center">
             <Reveal>
@@ -510,16 +473,16 @@ export default function Home() {
               </div>
             </Reveal>
 
-        <Reveal delay={0.1}>
-  <h1 className="text-6xl md:text-8xl lg:text-9xl font-display font-bold tracking-tighter mb-6 leading-tight">
-    <span className="block text-transparent bg-clip-text bg-gradient-to-r from-white via-gray-200 to-gray-500">
-      Autonomous
-    </span>
-    <span className="block pb-1 text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 mt-2">
-      SWE Agent
-    </span>
-  </h1>
-</Reveal>
+            <Reveal delay={0.1}>
+              <h1 className="text-6xl md:text-8xl lg:text-9xl font-display font-bold tracking-tighter mb-6 leading-tight">
+                <span className="block text-transparent bg-clip-text bg-gradient-to-r from-white via-gray-200 to-gray-500">
+                  Autonomous
+                </span>
+                <span className="block pb-1 text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 mt-2">
+                  SWE Agent
+                </span>
+              </h1>
+            </Reveal>
 
             <Reveal delay={0.2}>
               <div className="h-8 mb-8">
@@ -542,279 +505,274 @@ export default function Home() {
               </div>
             </Reveal>
 
+            {/* --- NEW SIMULATION UI --- */}
             <Reveal delay={0.4}>
-              <div className="relative max-w-5xl mx-auto">
-                <TiltCard className="bg-white/5 p-2 rounded-2xl border border-white/10 shadow-2xl backdrop-blur-xl animate-float">
-                  <div className="bg-[#0d1117] rounded-xl overflow-hidden border border-white/5 relative aspect-[16/9] md:aspect-[21/9]">
-                    {/* GitHub Header Mockup */}
-                    <div className="h-12 border-b border-white/10 flex items-center justify-between px-4 bg-black/20">
-                      <div className="flex items-center gap-3">
-                        <div className="w-6 h-6 bg-gray-600 rounded-full flex items-center justify-center">
-                          <Github className="w-4 h-4 text-white" />
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-white font-semibold text-sm">PiPilot</span>
-                          <span className="text-gray-400 text-xs">/</span>
-                          <span className="text-white font-semibold text-sm">swe-agent</span>
-                        </div>
+              <div className="relative max-w-6xl mx-auto">
+                <TiltCard className="bg-[#0d1117] border border-white/10 shadow-2xl rounded-xl overflow-hidden animate-float">
+
+                  {/* GitHub Header Mockup */}
+                  <div className="h-14 border-b border-white/10 flex items-center justify-between px-4 bg-[#161b22]">
+                    <div className="flex items-center gap-4">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-600 to-cyan-500 flex items-center justify-center text-xs font-bold text-white">Pi</div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="text-gray-300">PiPilot</span>
+                        <span className="text-gray-600">/</span>
+                        <span className="text-white font-semibold">swe-agent</span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                        <span className="text-xs text-gray-400">PiPilot Active</span>
+                      <div className="hidden md:flex items-center gap-1 text-xs bg-white/5 px-2 py-1 rounded-md">
+                        <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                        Public
                       </div>
                     </div>
 
-                    {/* GitHub Issue/PR Content */}
-                    <div className="p-6">
-                      {/* Issue Header */}
-                      <div className="flex items-start justify-between mb-6">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <div className="w-5 h-5 bg-purple-600 rounded-full flex items-center justify-center">
-                              <Bug className="w-3 h-3 text-white" />
-                            </div>
-                            <h3 className="text-lg font-semibold text-white">Implement user authentication system</h3>
-                            <span className="px-2 py-1 bg-green-900/30 text-green-400 text-xs rounded-full border border-green-500/30">#402</span>
-                          </div>
-                          <p className="text-gray-400 text-sm mb-3">Add secure login functionality with JWT tokens and password hashing</p>
-                          <div className="flex items-center gap-4 text-xs text-gray-500">
-                            <span>Opened by <span className="text-blue-400">johndoe</span></span>
-                            <span>2 hours ago</span>
-                            <span className="flex items-center gap-1">
-                              <span className="w-2 h-2 bg-yellow-500 rounded-full"></span>
-                              enhancement
-                            </span>
-                          </div>
-                        </div>
+                    {/* Navigation Tabs */}
+                    <div className="flex items-center gap-1">
+                      <button className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${currentView === 'issue' ? 'bg-white/10 text-white' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}>
+                        <i className="mr-1">●</i> Issues
+                      </button>
+                      <button className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${currentView.includes('pr') ? 'bg-white/10 text-white' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}>
+                        <GitPullRequest className="w-3 h-3 mr-1 inline" /> Pull requests
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex min-h-[500px]">
+                    {/* Sidebar */}
+                    <div className="hidden md:flex flex-col w-64 border-r border-white/10 bg-[#0d1117]/50 p-4 gap-4">
+                      <div className="space-y-1">
+                        <div className="text-xs font-bold text-gray-500 uppercase">Repositories</div>
+                        <div className="text-sm text-white flex items-center gap-2"><BookOpen className="w-4 h-4" /> swe-agent</div>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="text-xs font-bold text-gray-500 uppercase">In this repository</div>
+                        <div className={`text-sm flex items-center gap-2 px-2 py-1 rounded-md ${currentView === 'issue' ? 'bg-purple-500/20 text-purple-300' : 'text-gray-400 hover:text-white'}`}><Code className="w-4 h-4" /> Code</div>
+                        <div className={`text-sm flex items-center gap-2 px-2 py-1 rounded-md ${currentView === 'issue' ? 'bg-purple-500/20 text-purple-300' : 'text-gray-400 hover:text-white'}`}><AlertCircle className="w-4 h-4" /> Issues</div>
+                        <div className={`text-sm flex items-center gap-2 px-2 py-1 rounded-md ${currentView.includes('pr') ? 'bg-purple-500/20 text-purple-300' : 'text-gray-400 hover:text-white'}`}><GitPullRequest className="w-4 h-4" /> Pull requests <span className="ml-auto bg-gray-700 text-xs px-1.5 rounded-full">1</span></div>
+                        <div className="text-sm flex items-center gap-2 px-2 py-1 rounded-md text-gray-400 hover:text-white"><Play className="w-4 h-4" /> Actions</div>
                       </div>
 
-                      {/* PiPilot Bot Activity */}
-                      <div className="bg-[#161b22] rounded-lg border border-white/10 p-4 mb-4">
-                        <div className="flex items-center gap-3 mb-3">
-                          <div className="w-8 h-8 bg-gradient-to-r from-purple-600 to-cyan-600 rounded-full flex items-center justify-center">
-                            <Bot className="w-4 h-4 text-white" />
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-white font-semibold text-sm">PiPilot</span>
-                              <span className="px-2 py-0.5 bg-purple-900/30 text-purple-400 text-xs rounded-full">Bot</span>
-                            </div>
-                            <span className="text-gray-400 text-xs">started working on this 5 minutes ago</span>
-                          </div>
+                      <div className="mt-auto p-3 bg-gradient-to-br from-purple-900/20 to-cyan-900/20 rounded-lg border border-white/5">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Bot className="w-4 h-4 text-purple-400" />
+                          <span className="text-xs font-bold text-white">PiPilot Status</span>
                         </div>
+                        <div className="text-xs text-gray-400">{step === 0 ? 'Idle' : 'Active Task: Auth System'}</div>
+                        {isAutoPlaying && <div className="w-full bg-gray-700 h-1 mt-2 rounded-full overflow-hidden"><div className="bg-purple-500 h-full animate-[loading_2s_ease-in-out_infinite]" style={{ width: '50%' }}></div></div>}
+                      </div>
+                    </div>
 
-                            <div className="space-y-3">
-                            <div className="flex items-center gap-2 text-sm">
-                              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                              <span className="text-gray-300">Analyzing codebase structure...</span>
-                            </div>
+                    {/* Main Content Area */}
+                    <div className="flex-1 p-0 relative bg-[#0d1117]">
 
-                            {/* Simulated user comment and bot replies */}
-                            <div className="mt-3">
-                              {!issueCreated ? (
-                                <div className="text-xs text-gray-400">No issue created yet. Use the controls to simulate creating an issue and mentioning the bot.</div>
-                              ) : (
-                                <div className="space-y-2">
-                                  <div className="text-sm text-gray-300">User comment:</div>
-                                  <div className="bg-black/40 p-2 rounded-md text-sm text-gray-200">{commentText}</div>
-
-                                  <div className="mt-2">
-                                    <div className="text-sm text-gray-300 mb-1">Bot activity:</div>
-                                    <div className="space-y-2">
-                                      {botStatus === 'thinking' && (
-                                        <div className="flex items-center gap-2 text-sm text-gray-300">
-                                          <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse" />
-                                          <span>PiPilot SWE Agent is thinking...</span>
-                                        </div>
-                                      )}
-
-                                      {/* Show typing animation */}
-                                      {isTyping && typingComment && (
-                                        <div className="flex items-center gap-2 text-sm text-cyan-300">
-                                          <Bot className="w-4 h-4 text-purple-400" />
-                                          <span>{typingComment}<span className="animate-pulse">|</span></span>
-                                        </div>
-                                      )}
-
-                                      {botComments.map((c, i) => (
-                                        <div key={i} className="flex items-center gap-2 text-sm text-gray-300">
-                                          <CheckCircle className="w-4 h-4 text-green-400" />
-                                          <span>{c}</span>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-
-                            {/* Progress Bar */}
-                            <div className="mt-4">
-                              <div className="flex justify-between text-xs text-gray-400 mb-1">
-                                <span>Implementation Progress</span>
-                                <span>{prCreated ? (prMerged ? 'Merged' : 'PR Created') : '0%'}</span>
-                              </div>
-                              <div className="w-full bg-gray-700 rounded-full h-2">
-                                <div className="bg-gradient-to-r from-purple-600 to-cyan-600 h-2 rounded-full animate-pulse" style={{width: prCreated ? (prMerged ? '100%' : '85%') : '5%'}}></div>
-                              </div>
-                            </div>
-
-                            {/* Sim Controls */}
-                            <div className="mt-4 space-y-2">
-                              {!issueCreated ? (
-                                <div className="flex flex-wrap gap-2">
-                                  <button onClick={simulateCreateIssue} className="px-4 py-2 bg-white/6 hover:bg-white/10 rounded-md text-sm transition-all" disabled={isAutoPlaying}>Create Issue</button>
-                                  <button onClick={autoPlayDemo} disabled={isAutoPlaying} className="px-4 py-2 bg-gradient-to-r from-purple-600 to-cyan-600 hover:from-purple-700 hover:to-cyan-700 rounded-md text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed">
-                                    {isAutoPlaying ? 'Playing Demo...' : '▶ Play Full Demo'}
-                                  </button>
-                                </div>
-                              ) : (
-                                <div className="space-y-2">
-                                  <div className="flex flex-col gap-1">
-                                    <div className="flex items-center gap-2">
-                                      <input 
-                                        value={commentText} 
-                                        onChange={(e) => setCommentText(e.target.value)} 
-                                        placeholder="Type '@pipilot-swe-agent' followed by your task..."
-                                        className="flex-1 bg-black/30 px-3 py-2 rounded-md text-sm text-gray-200 border border-white/10 focus:border-cyan-500/50 focus:outline-none transition-all" 
-                                        disabled={isTyping || isAutoPlaying}
-                                      />
-                                      <button onClick={simulateAddComment} disabled={isTyping || isAutoPlaying} className="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 rounded-md text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed">Add Comment</button>
-                                    </div>
-                                    <div className="text-xs text-gray-500 italic">💡 Tip: Mention @pipilot-swe-agent in your comment to trigger the bot</div>
-                                  </div>
-                                  <div className="flex gap-2">
-                                    <button onClick={simulateViewPR} className={`px-4 py-2 rounded-md text-sm transition-all ${prCreated ? 'bg-purple-600 hover:bg-purple-700' : 'bg-white/6 cursor-not-allowed'}`} disabled={!prCreated || isAutoPlaying}>View PR</button>
-                                    {prCreated && !prMerged && (
-                                      <button onClick={simulateMergePR} disabled={isTyping || isAutoPlaying} className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-md text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed">Merge PR</button>
-                                    )}
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-
-                      {/* Code Preview or PR View */}
-                      {activeTab === 'pr' ? (
-                        <div className="bg-[#0d1117] rounded-lg border border-white/10 overflow-hidden p-4">
-                          <div className="flex items-center justify-between mb-4">
-                            <div>
-                              <div className="text-sm font-semibold text-white">PR: Implement user authentication (feature/auth-jwt)</div>
-                              <div className="text-xs text-gray-400">Opened by PiPilot SWE Agent • branch: feature/auth-jwt • #403</div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <button onClick={simulateMergePR} disabled={prMerged || isTyping || isAutoPlaying} className={`px-3 py-2 rounded-md text-sm transition-all ${prMerged ? 'bg-gray-700/30 text-gray-300' : 'bg-green-600 hover:bg-green-700 text-white disabled:opacity-50'}`}>{prMerged ? '✓ Merged' : 'Merge PR'}</button>
-                            </div>
-                          </div>
-
-                          <div className="bg-[#0b1220] rounded-md p-4 text-sm text-gray-200">
-                            <div className="mb-3 font-mono text-xs text-gray-400 flex items-center justify-between">
-                              <span>Files changed (3)</span>
-                              <button onClick={() => setShowDiffViewer(!showDiffViewer)} className="text-cyan-400 hover:text-cyan-300 transition-all">
-                                {showDiffViewer ? 'Hide' : 'Show'} Diffs
+                      {/* VIEW: ISSUE */}
+                      {currentView === 'issue' && (
+                        <div className="p-6 animate-in fade-in duration-500">
+                          {step === 0 && (
+                            <div className="text-center py-20">
+                              <button onClick={runSimulation} className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold shadow-lg shadow-purple-500/20 transition-all flex items-center gap-2 mx-auto">
+                                <Play className="w-4 h-4" /> Start Simulation
                               </button>
                             </div>
-                            
-                            {!showDiffViewer ? (
-                              <div className="space-y-2">
-                                <div className="bg-black/30 rounded-md p-2 border-l-2 border-green-500">+ src/middleware/auth.js <span className="text-green-400">(+120 lines)</span></div>
-                                <div className="bg-black/30 rounded-md p-2 border-l-2 border-green-500">+ src/routes/login.js <span className="text-green-400">(+40 lines)</span></div>
-                                <div className="bg-black/30 rounded-md p-2 border-l-2 border-green-500">+ tests/auth.test.js <span className="text-green-400">(+28 lines)</span></div>
+                          )}
+
+                          {step > 0 && (
+                            <div>
+                              {/* Issue Header */}
+                              <div className="flex items-start gap-4 mb-6">
+                                <div className="flex-1">
+                                  <h1 className="text-2xl font-bold text-white mb-2">Implement JWT Authentication</h1>
+                                  <div className="flex items-center gap-3 text-sm text-gray-400">
+                                    <span>#402 opened 5 minutes ago by <span className="text-white">dev-user</span></span>
+                                    <span className="px-2 py-0.5 rounded-full bg-green-900/30 text-green-400 border border-green-700 text-xs">enhancement</span>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <img src="https://github.com/github.png" className="w-8 h-8 rounded-full" alt="User" />
+                                </div>
                               </div>
-                            ) : (
+
+                              {/* Issue Description */}
+                              <div className="bg-[#161b22] border border-white/10 rounded-lg p-4 mb-8 text-sm text-gray-300">
+                                <p>We need to add a secure login system.</p>
+                                <ul className="list-disc pl-5 mt-2 space-y-1">
+                                  <li>Implement JWT token generation</li>
+                                  <li>Add password hashing (bcrypt)</li>
+                                  <li>Create middleware for protected routes</li>
+                                </ul>
+                              </div>
+
+                              {/* Comments Timeline */}
                               <div className="space-y-4">
-                                {/* File 1 Diff */}
-                                <div className="border border-white/10 rounded-md overflow-hidden">
-                                  <div className="bg-[#161b22] px-3 py-2 text-xs font-mono flex items-center gap-2">
-                                    <span className="text-gray-400">src/middleware/auth.js</span>
-                                    <span className="text-green-400">+120</span>
-                                  </div>
-                                  <div className="font-mono text-xs">
-                                    <div className="bg-green-900/20 border-l-2 border-green-500 px-3 py-1 text-green-300"><span className="text-green-600 mr-2">+1</span>const jwt = require('jsonwebtoken');</div>
-                                    <div className="bg-green-900/20 border-l-2 border-green-500 px-3 py-1 text-green-300"><span className="text-green-600 mr-2">+2</span>const bcrypt = require('bcryptjs');</div>
-                                    <div className="bg-green-900/20 border-l-2 border-green-500 px-3 py-1 text-green-300"><span className="text-green-600 mr-2">+3</span></div>
-                                    <div className="bg-green-900/20 border-l-2 border-green-500 px-3 py-1 text-green-300"><span className="text-green-600 mr-2">+4</span>const authenticateToken = async (req, res, next) =&gt; {'{'}</div>
-                                    <div className="bg-green-900/20 border-l-2 border-green-500 px-3 py-1 text-green-300"><span className="text-green-600 mr-2">+5</span>  const token = req.headers['authorization'];</div>
-                                    <div className="px-3 py-1 text-gray-500"><span className="mr-2">...</span>// +115 more lines</div>
+                                {/* Initial User Comment */}
+                                <div className="flex gap-3">
+                                  <img src="https://github.com/github.png" className="w-8 h-8 rounded-full" alt="User" />
+                                  <div className="flex-1">
+                                    <div className="bg-[#161b22] border border-white/10 rounded-lg p-4 text-sm text-gray-200">
+                                      <p>@pipilot-swe-agent Please handle this implementation. We need it done by EOD.</p>
+                                    </div>
                                   </div>
                                 </div>
 
-                                {/* File 2 Diff */}
-                                <div className="border border-white/10 rounded-md overflow-hidden">
-                                  <div className="bg-[#161b22] px-3 py-2 text-xs font-mono flex items-center gap-2">
-                                    <span className="text-gray-400">src/routes/login.js</span>
-                                    <span className="text-green-400">+40</span>
+                                {/* Bot Comments */}
+                                {comments.map((comment, idx) => (
+                                  <div key={idx} className="flex gap-3 animate-in slide-in-from-left-2 duration-300">
+                                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-600 to-cyan-500 flex items-center justify-center text-xs font-bold text-white">Pi</div>
+                                    <div className="flex-1">
+                                      <div className="flex items-center gap-2 mb-1">
+                                        <span className="text-sm font-semibold text-white">PiPilot SWE Agent</span>
+                                        <span className="text-xs text-gray-500">just now</span>
+                                        <span className="px-2 py-0.5 bg-purple-500/10 text-purple-400 text-xs rounded-full border border-purple-500/20">Bot</span>
+                                      </div>
+                                      <div className="bg-[#161b22] border border-white/10 rounded-lg p-4 text-sm text-gray-200">
+                                        <p className="whitespace-pre-wrap">{comment.text}</p>
+                                      </div>
+                                    </div>
                                   </div>
-                                  <div className="font-mono text-xs">
-                                    <div className="bg-green-900/20 border-l-2 border-green-500 px-3 py-1 text-green-300"><span className="text-green-600 mr-2">+1</span>router.post('/login', async (req, res) =&gt; {'{'}</div>
-                                    <div className="bg-green-900/20 border-l-2 border-green-500 px-3 py-1 text-green-300"><span className="text-green-600 mr-2">+2</span>  const {'{'} username, password {'}'} = req.body;</div>
-                                    <div className="bg-green-900/20 border-l-2 border-green-500 px-3 py-1 text-green-300"><span className="text-green-600 mr-2">+3</span>  // Validate user credentials</div>
-                                    <div className="px-3 py-1 text-gray-500"><span className="mr-2">...</span>// +37 more lines</div>
-                                  </div>
-                                </div>
+                                ))}
 
-                                {/* File 3 Diff */}
-                                <div className="border border-white/10 rounded-md overflow-hidden">
-                                  <div className="bg-[#161b22] px-3 py-2 text-xs font-mono flex items-center gap-2">
-                                    <span className="text-gray-400">tests/auth.test.js</span>
-                                    <span className="text-green-400">+28</span>
+                                {/* Bot Typing Indicator */}
+                                {botTyping && (
+                                  <div className="flex gap-3">
+                                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-600 to-cyan-500 flex items-center justify-center text-xs font-bold text-white">Pi</div>
+                                    <div className="bg-[#161b22] border border-white/10 rounded-lg p-4 text-sm text-gray-400 flex items-center gap-1">
+                                      <span className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                                      <span className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                                      <span className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                                    </div>
                                   </div>
-                                  <div className="font-mono text-xs">
-                                    <div className="bg-green-900/20 border-l-2 border-green-500 px-3 py-1 text-green-300"><span className="text-green-600 mr-2">+1</span>describe('Authentication', () =&gt; {'{'}</div>
-                                    <div className="bg-green-900/20 border-l-2 border-green-500 px-3 py-1 text-green-300"><span className="text-green-600 mr-2">+2</span>  it('should login with valid credentials', async () =&gt; {'{'}</div>
-                                    <div className="bg-green-900/20 border-l-2 border-green-500 px-3 py-1 text-green-300"><span className="text-green-600 mr-2">+3</span>    const response = await request(app)</div>
-                                    <div className="px-3 py-1 text-gray-500"><span className="mr-2">...</span>// +25 more lines</div>
-                                  </div>
-                                </div>
+                                )}
                               </div>
-                            )}
-                            
-                            <div className="mt-4 text-gray-400">{prMerged ? '✓ This pull request was merged successfully.' : 'Ready for review — click Merge to complete.'}</div>
-                          </div>
+                            </div>
+                          )}
                         </div>
-                      ) : (
-                        <div className="bg-[#0d1117] rounded-lg border border-white/10 overflow-hidden">
-                          <div className="flex items-center justify-between px-4 py-2 bg-[#161b22] border-b border-white/10">
-                            <div className="flex items-center gap-2">
-                              <div className="w-3 h-3 rounded-full bg-red-500/50"></div>
-                              <div className="w-3 h-3 rounded-full bg-yellow-500/50"></div>
-                              <div className="w-3 h-3 rounded-full bg-green-500/50"></div>
-                              <span className="text-xs text-gray-400 ml-2 font-mono">auth.js</span>
+                      )}
+
+                      {/* VIEW: PR LIST */}
+                      {currentView === 'pr-list' && (
+                        <div className="p-4 animate-in fade-in duration-500">
+                          <div className="flex items-center justify-between mb-4 px-2">
+                            <h2 className="text-sm font-bold text-white">1 Open</h2>
+                            <div className="flex gap-2">
+                              <button className="px-3 py-1 bg-white/5 hover:bg-white/10 rounded-md text-xs text-gray-300 border border-white/10">Filters</button>
+                              <button className="px-3 py-1 bg-white/5 hover:bg-white/10 rounded-md text-xs text-gray-300 border border-white/10">Search</button>
                             </div>
-                            <span className="text-xs text-gray-500">Generated by PiPilot</span>
                           </div>
-                          <div className="p-4 font-mono text-sm">
-                            <div className="flex gap-2 text-pink-400">
-                              <span>const</span>
-                              <span className="text-blue-400">jwt</span>
-                              <span>=</span>
-                              <span className="text-yellow-300">require</span>
-                              <span className="text-green-400">('jsonwebtoken')</span>;
+
+                          {/* PR Item Row */}
+                          <div className="flex gap-4 p-3 border-b border-white/5 hover:bg-white/5 transition-colors cursor-pointer bg-white/[0.02] border-l-2 border-l-transparent hover:border-l-green-500">
+                            <GitPullRequest className="w-4 h-4 text-green-500 mt-1" />
+                            <div className="flex-1">
+                              <div className="text-sm font-semibold text-white hover:text-cyan-400 transition-colors">
+                                feat: Add JWT authentication implementation
+                              </div>
+                              <div className="text-xs text-gray-500 mt-1">
+                                #403 opened 2 minutes ago by <span className="text-purple-400">PiPilot</span>
+                              </div>
+                              <div className="flex items-center gap-2 mt-2">
+                                <span className="px-2 py-0.5 rounded-full bg-green-900/20 text-green-400 text-xs border border-green-900/50">feature/auth-jwt</span>
+                                <span className="text-xs text-gray-600">+188 -12</span>
+                              </div>
                             </div>
-                            <br />
-                            <div className="flex gap-2 text-pink-400">
-                              <span>const</span>
-                              <span className="text-blue-400">authenticateToken</span>
-                              <span>=</span>
-                              <span className="text-yellow-300">async</span>
-                              <span className="text-green-400">(req, res, next)</span>
-                              <span>{'=>'}</span>
-                              <span className="text-white">{'{'}</span>
-                            </div>
-                            <div className="ml-4 text-gray-400">
-                              // PiPilot: JWT middleware for secure authentication
+                            <div className="flex items-center gap-1 text-xs text-gray-400">
+                              <img src="https://github.com/github.png" className="w-5 h-5 rounded-full" />
                             </div>
                           </div>
                         </div>
                       )}
-                    </div>
 
-                    {/* Status Badge */}
-                    <div className="absolute bottom-6 right-6 bg-black/60 backdrop-blur border border-cyan-500/30 px-4 py-2 rounded-full flex items-center gap-3 shadow-lg">
-                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                      <span className="text-sm font-bold">PiPilot Active</span>
+                      {/* VIEW: PR DETAIL */}
+                      {currentView === 'pr-detail' && (
+                        <div className="animate-in fade-in duration-500">
+                          {/* PR Header */}
+                          <div className="p-6 border-b border-white/10 bg-[#161b22]/50">
+                            <div className="flex items-center gap-2 mb-2">
+                              <GitPullRequest className={`w-5 h-5 ${step === 8 ? 'text-purple-500' : 'text-green-500'}`} />
+                              <h1 className="text-xl font-bold text-white">feat: Add JWT authentication implementation</h1>
+                              <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border ${step === 8 ? 'bg-purple-500/10 text-purple-400 border-purple-500/30' : 'bg-green-500/10 text-green-400 border-green-500/30'}`}>
+                                {step === 8 ? 'Merged' : 'Open'}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-4 text-sm text-gray-400">
+                              <span>#403</span>
+                              <span>opened 2 minutes ago by <span className="text-purple-400">PiPilot</span></span>
+                            </div>
+                          </div>
+
+                          {/* PR Tabs */}
+                          <div className="flex border-b border-white/10 px-6 gap-6">
+                            <button
+                              onClick={() => setActiveTab('conversation')}
+                              className={`py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'conversation' ? 'border-white text-white' : 'border-transparent text-gray-400 hover:text-white'}`}
+                            >
+                              Conversation
+                            </button>
+                            <button
+                              onClick={() => setActiveTab('files')}
+                              className={`py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'files' ? 'border-white text-white' : 'border-transparent text-gray-400 hover:text-white'}`}
+                            >
+                              Files changed
+                            </button>
+                          </div>
+
+                          <div className="p-6">
+                            {/* TAB: CONVERSATION */}
+                            {activeTab === 'conversation' && (
+                              <div className="max-w-3xl">
+                                <div className="text-sm text-gray-300 mb-4">Adding full JWT support with tests.</div>
+
+                                {step >= 8 ? (
+                                  <div className="bg-purple-900/20 border border-purple-500/30 rounded-lg p-4 text-center animate-in fade-in duration-500">
+                                    <CheckCircle className="w-8 h-8 text-purple-500 mx-auto mb-2" />
+                                    <div className="text-white font-semibold">Pull request merged successfully</div>
+                                    <div className="text-xs text-gray-400 mt-1">Branch feature/auth-jwt deleted</div>
+                                  </div>
+                                ) : (
+                                  <div className="flex justify-end mt-8">
+                                    <button className={`px-6 py-2 rounded-md text-sm font-bold transition-all shadow-lg ${step >= 7 ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-gray-700 text-gray-400 cursor-not-allowed'}`}>
+                                      Merge pull request
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            {/* TAB: FILES */}
+                            {activeTab === 'files' && (
+                              <div className="animate-in fade-in duration-500">
+                                <div className="text-xs text-gray-400 mb-4 font-mono">Showing 3 changed files with 188 additions and 12 deletions.</div>
+
+                                {/* Diff 1 */}
+                                <div className="border border-white/10 rounded-md mb-4 overflow-hidden">
+                                  <div className="bg-[#161b22] px-4 py-2 text-xs font-mono text-gray-300 border-b border-white/10 flex justify-between">
+                                    <span>src/middleware/auth.js</span>
+                                    <span className="text-green-400">+124</span>
+                                  </div>
+                                  <div className="bg-[#0d1117] p-4 font-mono text-xs overflow-x-auto">
+                                    <div className="bg-[#238636]/20 border-l-2 border-[#238636] px-2 py-1 text-gray-300"><span className="text-[#3fb950] select-none mr-2">+1</span><span className="text-[#ff7b72]">const</span> jwt = require(<span className="text-[#a5d6ff]">'jsonwebtoken'</span>);</div>
+                                    <div className="bg-[#238636]/20 border-l-2 border-[#238636] px-2 py-1 text-gray-300"><span className="text-[#3fb950] select-none mr-2">+2</span><span className="text-[#ff7b72]">const</span> bcrypt = require(<span className="text-[#a5d6ff]">'bcryptjs'</span>);</div>
+                                    <div className="px-2 py-1 text-gray-600">...</div>
+                                  </div>
+                                </div>
+
+                                {/* Diff 2 */}
+                                <div className="border border-white/10 rounded-md mb-4 overflow-hidden">
+                                  <div className="bg-[#161b22] px-4 py-2 text-xs font-mono text-gray-300 border-b border-white/10 flex justify-between">
+                                    <span>tests/auth.test.js</span>
+                                    <span className="text-green-400">+64</span>
+                                  </div>
+                                  <div className="bg-[#0d1117] p-4 font-mono text-xs overflow-x-auto">
+                                    <div className="bg-[#238636]/20 border-l-2 border-[#238636] px-2 py-1 text-gray-300"><span className="text-[#3fb950] select-none mr-2">+1</span>describe(<span className="text-[#a5d6ff]">'Auth Middleware'</span>, () ={'>'}  {'{'}{'}'}</div>
+                                    <div className="bg-[#238636]/20 border-l-2 border-[#238636] px-2 py-1 text-gray-300"><span className="text-[#3fb950] select-none mr-2">+2</span>  it(<span className="text-[#a5d6ff]">'should deny access without token'</span>, <span className="text-[#ff7b72]">async</span> () ={'>'}  {'{'}{'}'}</div>
+                                    <div className="px-2 py-1 text-gray-600">...</div>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  </div></div>
+                  </div>
                 </TiltCard>
               </div>
             </Reveal>
@@ -868,7 +826,7 @@ export default function Home() {
                     </div>
                   </Reveal>
                   <div className="absolute left-8 md:left-1/2 w-4 h-4 bg-black border-2 border-current rounded-full transform -translate-x-1/2 shadow-lg z-10" style={{ color: step.color.split(' ')[1].replace('text-', '') }}>
-                     <div className={`absolute inset-0 rounded-full animate-ping opacity-75 bg-${step.color.split('-')[1]}-400`} style={{ backgroundColor: 'currentColor' }}></div>
+                    <div className={`absolute inset-0 rounded-full animate-ping opacity-75 bg-${step.color.split('-')[1]}-400`} style={{ backgroundColor: 'currentColor' }}></div>
                   </div>
                   <Reveal width="45%" delay={i * 0.2 + 0.1}>
                     <div className={`md:${i % 2 !== 0 ? 'pr-12' : 'pl-12'} flex justify-${i % 2 !== 0 ? 'start' : 'end'} pl-20 md:pl-0`}>
@@ -889,7 +847,7 @@ export default function Home() {
             <Reveal>
               <div className="flex flex-col md:flex-row justify-between items-end mb-16">
                 <div className="max-w-2xl">
-                  <h2 className="text-4xl md:text-6xl font-display font-bold mb-4">Engineered for <br/><span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-600">Performance</span></h2>
+                  <h2 className="text-4xl md:text-6xl font-display font-bold mb-4">Engineered for <br /><span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-600">Performance</span></h2>
                 </div>
               </div>
             </Reveal>
@@ -961,146 +919,144 @@ export default function Home() {
           </div>
         </section>
 
-       {/* Pricing Section */}
-<section id="pricing" className="py-32 relative">
-  <div className="container mx-auto px-6">
-    <Reveal>
-      <div className="text-center mb-16">
-        <span className="text-cyan-400 font-mono text-sm tracking-widest uppercase mb-2 block">
-          Simple Pricing
-        </span>
-        <h2 className="text-4xl md:text-6xl font-display font-bold text-white mb-4">
-          Choose Your Plan
-        </h2>
-        <p className="text-gray-400 max-w-2xl mx-auto">
-          Start free and scale as you grow. All plans include full access to our AI SWE Agent.
-        </p>
-      </div>
-    </Reveal>
-
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-      {[
-        {
-          name: "Free",
-          price: "$0",
-          period: "forever",
-          description: "Perfect for getting started",
-          features: [
-            "10 Credits/month",
-            "Community support",
-            "GitHub integration"
-          ],
-          cta: "Get Started Free",
-          popular: false
-        },
-        {
-          name: "Pro",
-          price: "$30",
-          period: "per month",
-          description: "Most popular for teams",
-          features: [
-            "500 Credits/month",
-            "Premium AI models",
-            "Priority support",
-            "Advanced Code Reviews",
-           
-          ],
-          cta: "Select Pro",
-          popular: true
-        },
-        {
-          name: "Enterprise",
-          price: "Custom",
-          period: "pricing",
-          description: "For large organizations",
-          features: [
-            "Unlimited tasks",
-            "Dedicated support",
-            "Custom integrations",
-            "SLA guarantee",
-            "On-premise deployment",
-            "Advanced security"
-          ],
-          cta: "Contact Sales",
-          popular: false
-        }
-      ].map((plan, i) => (
-        <Reveal key={i} delay={i * 0.1}>
-          <TiltCard
-            className={`relative overflow-visible h-full p-8 rounded-3xl border transition-all duration-300 group ${
-              plan.popular
-                ? 'bg-gradient-to-b from-purple-900/20 to-cyan-900/20 border-purple-500/50 shadow-2xl shadow-purple-500/10 md:-translate-y-2'
-                : 'bg-white/5 border-white/10 hover:border-white/20'
-            }`}
-          >
-            {/* Most Popular Badge */}
-            {plan.popular && (
-              <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-20">
-                <span className="bg-gradient-to-r from-purple-600 to-cyan-600 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg">
-                  Most Popular
+        {/* Pricing Section */}
+        <section id="pricing" className="py-32 relative">
+          <div className="container mx-auto px-6">
+            <Reveal>
+              <div className="text-center mb-16">
+                <span className="text-cyan-400 font-mono text-sm tracking-widest uppercase mb-2 block">
+                  Simple Pricing
                 </span>
+                <h2 className="text-4xl md:text-6xl font-display font-bold text-white mb-4">
+                  Choose Your Plan
+                </h2>
+                <p className="text-gray-400 max-w-2xl mx-auto">
+                  Start free and scale as you grow. All plans include full access to our AI SWE Agent.
+                </p>
               </div>
-            )}
+            </Reveal>
 
-            {/* Header */}
-            <div className="text-center mb-8">
-              <h3 className="text-2xl font-bold text-white mb-2">
-                {plan.name}
-              </h3>
-              <div className="flex items-baseline justify-center gap-1 mb-2">
-                <span className="text-4xl font-bold text-white">
-                  {plan.price}
-                </span>
-                <span className="text-gray-400">
-                  {plan.period}
-                </span>
-              </div>
-              <p className="text-gray-400 text-sm">
-                {plan.description}
-              </p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+              {[
+                {
+                  name: "Free",
+                  price: "$0",
+                  period: "forever",
+                  description: "Perfect for getting started",
+                  features: [
+                    "10 Credits/month",
+                    "Community support",
+                    "GitHub integration"
+                  ],
+                  cta: "Get Started Free",
+                  popular: false
+                },
+                {
+                  name: "Pro",
+                  price: "$30",
+                  period: "per month",
+                  description: "Most popular for teams",
+                  features: [
+                    "500 Credits/month",
+                    "Premium AI models",
+                    "Priority support",
+                    "Advanced Code Reviews",
+
+                  ],
+                  cta: "Select Pro",
+                  popular: true
+                },
+                {
+                  name: "Enterprise",
+                  price: "Custom",
+                  period: "pricing",
+                  description: "For large organizations",
+                  features: [
+                    "Unlimited tasks",
+                    "Dedicated support",
+                    "Custom integrations",
+                    "SLA guarantee",
+                    "On-premise deployment",
+                    "Advanced security"
+                  ],
+                  cta: "Contact Sales",
+                  popular: false
+                }
+              ].map((plan, i) => (
+                <Reveal key={i} delay={i * 0.1}>
+                  <TiltCard
+                    className={`relative overflow-visible h-full p-8 rounded-3xl border transition-all duration-300 group ${plan.popular
+                        ? 'bg-gradient-to-b from-purple-900/20 to-cyan-900/20 border-purple-500/50 shadow-2xl shadow-purple-500/10 md:-translate-y-2'
+                        : 'bg-white/5 border-white/10 hover:border-white/20'
+                      }`}
+                  >
+                    {/* Most Popular Badge */}
+                    {plan.popular && (
+                      <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-20">
+                        <span className="bg-gradient-to-r from-purple-600 to-cyan-600 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg">
+                          Most Popular
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Header */}
+                    <div className="text-center mb-8">
+                      <h3 className="text-2xl font-bold text-white mb-2">
+                        {plan.name}
+                      </h3>
+                      <div className="flex items-baseline justify-center gap-1 mb-2">
+                        <span className="text-4xl font-bold text-white">
+                          {plan.price}
+                        </span>
+                        <span className="text-gray-400">
+                          {plan.period}
+                        </span>
+                      </div>
+                      <p className="text-gray-400 text-sm">
+                        {plan.description}
+                      </p>
+                    </div>
+
+                    {/* Features */}
+                    <ul className="space-y-4 mb-8">
+                      {plan.features.map((feature, idx) => (
+                        <li key={idx} className="flex items-center gap-3">
+                          <CheckCircle className="w-5 h-5 text-green-400 flex-shrink-0" />
+                          <span className="text-gray-300 text-sm">
+                            {feature}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+
+                    {/* CTA */}
+                    <Link href="/setup" className="block w-full">
+                      <button
+                        className={`w-full py-3 px-6 rounded-xl font-semibold transition-all duration-300 ${plan.popular
+                            ? 'bg-gradient-to-r from-purple-600 to-cyan-600 text-white hover:shadow-lg hover:shadow-purple-500/25'
+                            : 'bg-white/10 text-white hover:bg-white/20 border border-white/20'
+                          }`}
+                      >
+                        {plan.cta}
+                      </button>
+                    </Link>
+                  </TiltCard>
+                </Reveal>
+              ))}
             </div>
 
-            {/* Features */}
-            <ul className="space-y-4 mb-8">
-              {plan.features.map((feature, idx) => (
-                <li key={idx} className="flex items-center gap-3">
-                  <CheckCircle className="w-5 h-5 text-green-400 flex-shrink-0" />
-                  <span className="text-gray-300 text-sm">
-                    {feature}
-                  </span>
-                </li>
-              ))}
-            </ul>
-
-            {/* CTA */}
-            <Link href="/setup" className="block w-full">
-              <button
-                className={`w-full py-3 px-6 rounded-xl font-semibold transition-all duration-300 ${
-                  plan.popular
-                    ? 'bg-gradient-to-r from-purple-600 to-cyan-600 text-white hover:shadow-lg hover:shadow-purple-500/25'
-                    : 'bg-white/10 text-white hover:bg-white/20 border border-white/20'
-                }`}
-              >
-                {plan.cta}
-              </button>
-            </Link>
-          </TiltCard>
-        </Reveal>
-      ))}
-    </div>
-
-    <Reveal delay={0.4}>
-      <div className="text-center mt-12">
-        <Link
-          href="/setup"
-          className="text-cyan-400 hover:text-cyan-300 transition-colors text-sm font-medium"
-        >
-          View detailed pricing and plans →
-        </Link>
-      </div>
-    </Reveal>
-  </div>
-</section>
+            <Reveal delay={0.4}>
+              <div className="text-center mt-12">
+                <Link
+                  href="/setup"
+                  className="text-cyan-400 hover:text-cyan-300 transition-colors text-sm font-medium"
+                >
+                  View detailed pricing and plans →
+                </Link>
+              </div>
+            </Reveal>
+          </div>
+        </section>
 
 
         {/* CTA Section */}
@@ -1108,9 +1064,9 @@ export default function Home() {
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-purple-900/10 to-transparent"></div>
           <div className="container mx-auto px-6 text-center relative z-10">
             <Reveal>
-              <h2 className="text-5xl md:text-7xl font-display font-bold mb-8 tracking-tighter">Ready to <br/> <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-600">Deploy 10x Faster?</span></h2>
+              <h2 className="text-5xl md:text-7xl font-display font-bold mb-8 tracking-tighter">Ready to <br /> <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-600">Deploy 10x Faster?</span></h2>
               <p className="text-xl text-gray-400 mb-10">Join the revolution of autonomous software engineering.</p>
-              
+
               <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
                 <Link href="/setup">
                   <button className="px-8 py-4 bg-white text-black font-bold rounded-full hover:bg-gray-200 transition-colors shadow-[0_0_40px_rgba(255,255,255,0.3)]">
@@ -1134,13 +1090,13 @@ export default function Home() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
             <div className="col-span-1 md:col-span-1">
               <div className="flex items-center gap-2 mb-6">
- <img src="/logo.png" alt="PiPilot Logo" className=" w-12 h-12" />                <span className="font-display font-bold text-xl tracking-tight text-white">PiPilot</span>
+                <img src="/logo.png" alt="PiPilot Logo" className=" w-12 h-12" />                <span className="font-display font-bold text-xl tracking-tight text-white">PiPilot</span>
               </div>
               <p className="text-gray-500 text-sm leading-relaxed">
                 The autonomous AI agent that writes, tests, and deploys production-ready code.
               </p>
             </div>
-            
+
             <div>
               <h4 className="font-bold text-white mb-6">Product</h4>
               <ul className="space-y-4 text-sm text-gray-400">
@@ -1149,7 +1105,7 @@ export default function Home() {
                 <li><Link href="#pricing" className="hover:text-cyan-400 transition-colors">Pricing</Link></li>
               </ul>
             </div>
-            
+
             <div>
               <h4 className="font-bold text-white mb-6">Resources</h4>
               <ul className="space-y-4 text-sm text-gray-400">
@@ -1157,10 +1113,10 @@ export default function Home() {
                 <li><Link href="https://pipilot.dev/blog" className="hover:text-cyan-400 transition-colors">Blog</Link></li>
               </ul>
             </div>
-            
-            
+
+
           </div>
-          
+
           <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-gray-600 text-sm">© 2025 PiPilot Inc. All rights reserved.</p>
             <div className="flex gap-6">
