@@ -186,12 +186,29 @@ export default function Dashboard() {
 
       const dashData = await response.json();
       
+      // Fetch installations from API endpoint
+      const installationsResponse = await fetch(`/api/installations?username=${encodeURIComponent(userData.github_username)}`, {
+        headers: githubToken ? { 'Authorization': `Bearer ${githubToken}` } : {}
+      });
+
+      let installations = [];
+      if (installationsResponse.ok) {
+        const installationsData = await installationsResponse.json();
+        installations = installationsData.installations || [];
+        console.log(`Loaded ${installations.length} installations for user`);
+      } else {
+        console.warn('Failed to fetch installations:', installationsResponse.status);
+      }
+      
       // Update all state from API response
       setUser(userData);
       setUsage(dashData.usage);
       setRepositories(dashData.repositories);
       setRecentActivity(dashData.recentActivity);
-      setDashboardData(dashData);
+      setDashboardData({
+        ...dashData,
+        installations
+      });
 
     } catch (err) {
       console.error('Failed to load dashboard data:', err);
@@ -325,10 +342,10 @@ export default function Dashboard() {
               <div className="p-3 bg-green-500/20 rounded-lg">
                 <Github className="w-6 h-6 text-green-400" />
               </div>
-              <span className="text-sm text-gray-400">Repositories</span>
+              <span className="text-sm text-gray-400">Installations</span>
             </div>
-            <h3 className="text-2xl font-bold mb-1">{dashboardData?.repositories?.length || 0}</h3>
-            <p className="text-gray-400 text-sm">Connected repos</p>
+            <h3 className="text-2xl font-bold mb-1">{dashboardData?.installations?.length || 0}</h3>
+            <p className="text-gray-400 text-sm">Connected installations</p>
             <Link href="https://github.com/settings/installations" className="text-cyan-400 text-sm hover:text-cyan-300 mt-2 inline-block">
               Manage →
             </Link>
