@@ -1,5 +1,94 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import jwt from 'jsonwebtoken';
+
+// Generate JWT for GitHub App authentication
+function generateGitHubJWT(): string {
+  const appId = process.env.GITHUB_APP_ID;
+  const privateKey = process.env.GITHUB_PRIVATE_KEY;
+
+  if (!appId || !privateKey) {
+    throw new Error('GitHub App credentials not configured');
+  }
+
+  const payload = {
+    iat: Math.floor(Date.now() / 1000) - 60,
+    exp: Math.floor(Date.now() / 1000) + (10 * 60),
+    iss: appId
+  };
+
+  return jwt.sign(payload, privateKey.replace(/\\n/g, '\n'), { algorithm: 'RS256' });
+}
+
+// Get installation access token
+async function getInstallationToken(installationId: number): Promise<string | null> {
+  try {
+    const jwtToken = generateGitHubJWT();
+
+    const response = await fetch(
+      `https://api.github.com/app/installations/${installationId}/access_tokens`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${jwtToken}`,
+          'Accept': 'application/vnd.github.v3+json',
+          'User-Agent': 'PiPilot-SWE-Agent'
+        }
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.text();
+      console.error('Failed to get installation token:', error);
+      return null;
+    }
+
+    const data = await response.json();
+    return data.token;
+  } catch (error) {
+    console.error('Error getting installation token:', error);
+    return null;
+  }
+}
+
+// Get repositories from GitHub filtered by authenticated user
+async function getRepositoriesFromGitHub(installationId: number, authenticatedUsername: string): Promise<any[]> {
+  try {
+    const token = await getInstallationToken(installationId);
+    if (!token) return [];
+
+    const response = await fetch(
+      `https://api.github.com/installation/repositories`,
+      {
+        headers: {
+          'Authorization': `token ${token}`,
+          'Accept': 'application/vnd.github.v3+json',
+          'User-Agent': 'PiPilot-SWE-Agent'
+        }
+      }
+    );
+
+    if (!response.ok) {
+      console.error('Failed to fetch repositories:', await response.text());
+      return [];
+    }
+
+    const data = await response.json();
+    const allRepositories = data.repositories || [];
+
+    // SECURITY: Filter to only return repositories owned by the authenticated user
+    // This prevents exposing repositories from other users in the same installation
+    const userRepositories = allRepositories.filter((repo: any) => {
+      return repo.owner.login === authenticatedUsername;
+    });
+
+    console.log(`Filtered ${allRepositories.length} total repos to ${userRepositories.length} repos for user ${authenticatedUsername}`);
+    return userRepositories;
+  } catch (error) {
+    console.error('Error fetching repositories from GitHub:', error);
+    return [];
+  }
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -24,15 +113,23 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'User profile not found' }, { status: 404 });
     }
 
-    // Fetch repositories
-    const { data: repositories, error: repoError } = await supabase
-      .from('repositories')
-      .select('*')
-      .eq('installation_id', user.installation_id || 0);
+    // Fetch repositories from GitHub using installation token (filtered by authenticated user)
+    const repositories = user.installation_id 
+      ? await getRepositoriesFromGitHub(user.installation_id, user.github_username)
+      : [];
 
-    if (repoError) {
-      console.error('Error fetching repositories:', repoError);
-    }
+    // Format repositories for dashboard
+    const formattedRepositories = repositories.map((repo: any) => ({
+      id: repo.id,
+      name: repo.name,
+      full_name: repo.full_name,
+      description: repo.description,
+      url: repo.html_url,
+      private: repo.private,
+      language: repo.language,
+      stars: repo.stargazers_count,
+      updated_at: repo.updated_at
+    }));
 
     // Fetch recent usage logs
     const { data: usageLogs, error: usageError } = await supabase
@@ -109,7 +206,7 @@ export async function GET(request: NextRequest) {
         resetDate: nextReset.toISOString().split('T')[0],
         daysUntilReset
       },
-      repositories: repositories || [],
+      repositories: formattedRepositories,
       recentActivity: usageLogs?.map((log: any) => ({
         type: log.request_type,
         repo: repositories?.find((r: any) => r.id === log.repo_id)?.name || 'Unknown',

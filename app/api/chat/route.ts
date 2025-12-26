@@ -3932,8 +3932,8 @@ Remember: Your responses must appear as comments on GitHub issues/PRs, not as te
               installation_id: installationId,
               repo_id: repoId,
               request_type: 'chat',
-              input_tokens: result.usage.promptTokens || 0,
-              output_tokens: result.usage.completionTokens || 0,
+              input_tokens: result.usage.inputTokens || 0,
+              output_tokens: result.usage.outputTokens || 0,
               total_tokens: result.usage.totalTokens || 0,
               request_metadata: {
                 model: modelId,

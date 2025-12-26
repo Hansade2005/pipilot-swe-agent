@@ -36,6 +36,7 @@ interface User {
   installation_id?: number;
   deployments_this_month: number;
   github_pushes_this_month: number;
+  tasks_this_month?: number;
 }
 
 interface UsageData {
@@ -172,75 +173,28 @@ export default function Dashboard() {
 
   const loadDashboardData = async (userData: User) => {
     try {
-      // Calculate usage data
-      const now = new Date();
-      const currentMonth = now.getMonth();
-      const currentYear = now.getFullYear();
+      // Fetch dashboard data from API endpoint (includes server-side filtered repositories)
+      const response = await fetch('/api/dashboard');
+      
+      if (!response.ok) {
+        console.error('Failed to fetch dashboard data:', response.status);
+        throw new Error('Failed to load dashboard data');
+      }
 
-      // Get usage from usage_logs table
-      const startOfMonth = new Date(currentYear, currentMonth, 1);
-      const { data: usageLogs, error: usageError } = await supabase
-        .from('usage_logs')
-        .select('*')
-        .eq('user_id', userData.id)
-        .gte('created_at', startOfMonth.toISOString());
-
-      const tasksUsed = usageLogs?.length || 0;
-      const tasksLimit = userData.subscription_plan === 'pro' ? 150 :
-                        userData.subscription_plan === 'pro_annual' ? 170 : 10;
-
-      // Calculate reset date (end of current month)
-      const nextMonth = new Date(currentYear, currentMonth + 1, 1);
-      const resetDate = new Date(nextMonth.getTime() - 1);
-      const daysUntilReset = Math.ceil((resetDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-
-      setUsage({
-        tasksUsed,
-        tasksLimit,
-        resetDate: resetDate.toISOString().split('T')[0],
-        daysUntilReset
-      });
-
-      // Get repositories (mock data for now)
-      setRepositories([
-        { name: "sample-app", full_name: `${userData.github_username}/sample-app`, private: false, lastActivity: "2 hours ago" },
-        { name: "api-server", full_name: `${userData.github_username}/api-server`, private: true, lastActivity: "1 day ago" }
-      ]);
-
-      // Get recent activity
-      const recentLogs = usageLogs?.slice(0, 5) || [];
-      const mappedRecent = recentLogs.map(log => ({
-        type: log.request_type,
-        repo: "sample-repo", // Would need to join with repositories table
-        description: `Performed ${log.request_type.replace('_', ' ')}`,
-        time: new Date(log.created_at).toLocaleString()
-      }));
-
-      setRecentActivity(mappedRecent);
-
-      // assemble dashboardData for UI
-      setDashboardData({
-        user: {
-          id: userData.id,
-          name: userData.name || userData.github_username,
-          githubUsername: userData.github_username,
-          plan: userData.subscription_plan || 'free',
-          avatarUrl: userData.avatar_url,
-          subscriptionStatus: userData.subscription_status,
-          stripeCustomerId: userData.stripe_customer_id
-        },
-        usage: {
-          tasksUsed,
-          tasksLimit,
-          resetDate: resetDate.toISOString().split('T')[0],
-          daysUntilReset
-        },
-        repositories: repositories || [],
-        recentActivity: mappedRecent
-      });
+      const dashData = await response.json();
+      
+      // Update all state from API response
+      setUser(userData);
+      setUsage(dashData.usage);
+      setRepositories(dashData.repositories);
+      setRecentActivity(dashData.recentActivity);
+      setDashboardData(dashData);
 
     } catch (err) {
       console.error('Failed to load dashboard data:', err);
+      setError('Failed to load dashboard data');
+    } finally {
+      setLoading(false);
     }
   };
 

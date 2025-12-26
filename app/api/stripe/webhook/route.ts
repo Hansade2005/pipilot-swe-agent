@@ -182,10 +182,16 @@ export async function POST(request: NextRequest) {
             await updateUserSubscription(userId, subscription, event.id)
           } else if (session.metadata?.plan_type === 'credits_150') {
             // Handle credits purchase
+            const { data: currentUser } = await supabase
+              .from('users')
+              .select('tasks_this_month')
+              .eq('id', userId)
+              .single()
+
             const { error } = await supabase
               .from('users')
               .update({ 
-                tasks_this_month: supabase.raw('tasks_this_month + 150'),
+                tasks_this_month: (currentUser?.tasks_this_month || 0) + 150,
                 updated_at: new Date().toISOString()
               })
               .eq('id', userId)
