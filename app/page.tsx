@@ -249,6 +249,32 @@ export default function Home() {
     "Deploying to edge networks automatically..."
   ]);
 
+  // Modal state for image preview
+  const [selectedImage, setSelectedImage] = useState<{src: string, title: string, desc: string} | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const openModal = (image: {src: string, title: string, desc: string}) => {
+    setSelectedImage(image);
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setSelectedImage(null);
+  };
+
+  // Handle escape key to close modal
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isModalOpen) {
+        closeModal();
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [isModalOpen]);
+
   return (
     <div className="min-h-screen bg-[#030305] text-white overflow-x-hidden selection:bg-purple-500 selection:text-white font-sans">
       <CustomCursor />
@@ -259,11 +285,73 @@ export default function Home() {
            style={{backgroundImage: `linear-gradient(to right, rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.05) 1px, transparent 1px)`, backgroundSize: '40px 40px'}} 
       />
 
+      {/* Image Preview Modal */}
+      {isModalOpen && selectedImage && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+          onClick={closeModal}
+        >
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.8, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            className="relative max-w-4xl max-h-[90vh] w-full bg-gray-900/95 backdrop-blur-xl rounded-3xl border border-white/10 shadow-2xl overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close button */}
+            <button
+              onClick={closeModal}
+              className="absolute top-4 right-4 z-10 w-10 h-10 bg-black/50 hover:bg-black/70 border border-white/20 rounded-full flex items-center justify-center text-white transition-all duration-200 hover:scale-110"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            {/* Image */}
+            <div className="relative">
+              <img
+                src={selectedImage.src}
+                alt={selectedImage.title}
+                className="w-full h-auto max-h-[70vh] object-contain"
+              />
+
+              {/* Gradient overlay for text */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+
+              {/* Text content */}
+              <div className="absolute bottom-0 left-0 right-0 p-8">
+                <motion.h3
+                  initial={{ y: 20, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.2 }}
+                  className="text-2xl font-bold text-white mb-2"
+                >
+                  {selectedImage.title}
+                </motion.h3>
+                <motion.p
+                  initial={{ y: 20, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.3 }}
+                  className="text-gray-300 text-lg leading-relaxed"
+                >
+                  {selectedImage.desc}
+                </motion.p>
+              </div>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+
       {/* Navigation */}
       <nav className="fixed top-0 w-full z-50 transition-all duration-300 py-6 backdrop-blur-md bg-black/30 border-b border-white/5">
         <div className="container mx-auto px-6 flex justify-between items-center">
           <Link href="#" className="flex items-center gap-2 group">
-             <img src="/logo.png" alt="PiPilot Logo" className=" w-6 h-6" />
+             <img src="/logo.png" alt="PiPilot Logo" className=" w-12 h-12" />
             <span className="font-display font-bold text-xl tracking-tight text-white">PiPilot</span>
           </Link>
           
@@ -305,7 +393,7 @@ export default function Home() {
             <Reveal delay={0.1}>
               <h1 className="text-6xl md:text-8xl lg:text-9xl font-display font-bold tracking-tighter mb-6 leading-[0.9]">
                 <span className="block text-transparent bg-clip-text bg-gradient-to-r from-white via-gray-200 to-gray-500">Autonomous</span>
-                <span className="block text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 mt-2">SWE Agent</span>
+                <span className="block text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 mt-2">SWE Agent</span><br/>
               </h1>
             </Reveal>
 
@@ -579,7 +667,10 @@ export default function Home() {
                 { src: "/screenshot3.png", title: "Pull Request Creation", desc: "Automated PR creation with complete implementation" }
               ].map((screenshot, index) => (
                 <Reveal key={index} delay={index * 0.1}>
-                  <div className="group relative rounded-2xl overflow-hidden cursor-pointer">
+                  <div
+                    className="group relative rounded-2xl overflow-hidden cursor-pointer"
+                    onClick={() => openModal(screenshot)}
+                  >
                     <img
                       src={screenshot.src}
                       alt={screenshot.title}
@@ -588,6 +679,13 @@ export default function Home() {
                     <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-6">
                       <h4 className="text-white font-bold translate-y-4 group-hover:translate-y-0 transition-transform duration-300">{screenshot.title}</h4>
                       <p className="text-gray-300 text-sm translate-y-4 group-hover:translate-y-0 transition-transform duration-300 delay-75">{screenshot.desc}</p>
+                    </div>
+
+                    {/* Click indicator */}
+                    <div className="absolute top-4 right-4 w-8 h-8 bg-white/10 backdrop-blur-sm rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                      </svg>
                     </div>
                   </div>
                 </Reveal>
@@ -724,7 +822,7 @@ export default function Home() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
             <div className="col-span-1 md:col-span-1">
               <div className="flex items-center gap-2 mb-6">
- <img src="/logo.png" alt="PiPilot Logo" className=" w-6 h-6" />                <span className="font-display font-bold text-xl tracking-tight text-white">PiPilot</span>
+ <img src="/logo.png" alt="PiPilot Logo" className=" w-12 h-12" />                <span className="font-display font-bold text-xl tracking-tight text-white">PiPilot</span>
               </div>
               <p className="text-gray-500 text-sm leading-relaxed">
                 The autonomous AI agent that writes, tests, and deploys production-ready code.
@@ -754,9 +852,9 @@ export default function Home() {
           <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-gray-600 text-sm">© 2025 PiPilot Inc. All rights reserved.</p>
             <div className="flex gap-6">
-              <a href="#" className="text-gray-400 hover:text-white transition-colors">
+              <a href="https://github.com/apps/pipilot-swe-agent" className="text-gray-400 hover:text-white transition-colors">
                 <Github className="w-5 h-5" /></a>
-              <a href="#" className="text-gray-400 hover:text-white transition-colors"><Terminal className="w-5 h-5" /></a>
+              <a href="https://pipilot.dev" className="text-gray-400 hover:text-white transition-colors"><Terminal className="w-5 h-5" /></a>
             </div>
           </div>
         </div>

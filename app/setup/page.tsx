@@ -178,13 +178,13 @@ export default function SetupPage() {
       <nav className="fixed top-0 w-full z-50 transition-all duration-300 py-6 backdrop-blur-md bg-black/30 border-b border-white/5">
         <div className="container mx-auto px-6 flex justify-between items-center">
           <Link href="/" className="flex items-center gap-2 group">
- <img src="/logo.png" alt="PiPilot Logo" className=" w-6 h-6" />            <span className="font-display font-bold text-xl tracking-tight text-white">PiPilot</span>
+ <img src="/logo.png" alt="PiPilot Logo" className=" w-12 h-12" />            <span className="font-display font-bold text-xl tracking-tight text-white">PiPilot</span>
           </Link>
 
           <div className="hidden md:flex items-center gap-8">
             <Link href="/" className="text-sm font-medium text-gray-400 hover:text-white transition-colors">Home</Link>
-            <Link href="#plans" className="text-sm font-medium text-gray-400 hover:text-white transition-colors">Plans</Link>
-            <Link href="#features" className="text-sm font-medium text-gray-400 hover:text-white transition-colors">Features</Link>
+            <Link href="/#plans" className="text-sm font-medium text-gray-400 hover:text-white transition-colors">Plans</Link>
+            <Link href="/#features" className="text-sm font-medium text-gray-400 hover:text-white transition-colors">Features</Link>
             <Link href="https://pipilot.dev/docs" className="text-sm font-medium text-gray-400 hover:text-white transition-colors">Docs</Link>
           </div>
 
@@ -245,9 +245,9 @@ export default function SetupPage() {
                 <div className="flex items-center justify-center mb-8">
                   <div className="relative inline-block">
                     <div className="absolute inset-0 bg-gradient-to-r from-purple-600 via-pink-600 to-cyan-600 rounded-3xl blur-2xl opacity-50 animate-pulse" />
-                    <div className="relative bg-black/50 backdrop-blur-sm border border-white/10 rounded-3xl p-6">
-                      <Logo variant="icon" size="xl" />
-                    </div>
+                    
+                      <Logo variant="icon" size="md" className=" w-24 h-24" />
+                    
                   </div>
                 </div>
               </Reveal>
@@ -288,15 +288,15 @@ export default function SetupPage() {
             <Reveal delay={0.4}>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
                 <div className="bg-gray-900/50 backdrop-blur-sm border border-gray-800/50 rounded-xl p-6 text-center">
-                  <div className="w-12 h-12 bg-gradient-to-r from-purple-600 to-cyan-600 rounded-xl flex items-center justify-center mx-auto mb-4">
+                  <div className="w-12 h-12  flex items-center justify-center mx-auto mb-4">
                     <Zap className="w-6 h-6 text-white" />
                   </div>
                   <h3 className="text-white font-semibold mb-2">Lightning Fast</h3>
-                  <p className="text-gray-400 text-sm">Generate code in seconds, not hours</p>
+                  <p className="text-gray-400 text-sm">Fix any bug in seconds, not hours—right inside GitHub.</p>
                 </div>
 
                 <div className="bg-gray-900/50 backdrop-blur-sm border border-gray-800/50 rounded-xl p-6 text-center">
-                  <div className="w-12 h-12 bg-gradient-to-r from-purple-600 to-cyan-600 rounded-xl flex items-center justify-center mx-auto mb-4">
+                  <div className="w-12 h-12  flex items-center justify-center mx-auto mb-4">
                     <Shield className="w-6 h-6 text-white" />
                   </div>
                   <h3 className="text-white font-semibold mb-2">Enterprise Security</h3>
@@ -304,7 +304,7 @@ export default function SetupPage() {
                 </div>
 
                 <div className="bg-gray-900/50 backdrop-blur-sm border border-gray-800/50 rounded-xl p-6 text-center">
-                  <div className="w-12 h-12 bg-gradient-to-r from-purple-600 to-cyan-600 rounded-xl flex items-center justify-center mx-auto mb-4">
+                  <div className="w-12 h-12  flex items-center justify-center mx-auto mb-4">
                     <Rocket className="w-6 h-6 text-white" />
                   </div>
                   <h3 className="text-white font-semibold mb-2">Production Ready</h3>
