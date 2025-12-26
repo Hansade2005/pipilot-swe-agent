@@ -275,6 +275,126 @@ export default function Home() {
     return () => document.removeEventListener('keydown', handleEscape);
   }, [isModalOpen]);
 
+  // Simulation state for GitHub demo
+  const [issueCreated, setIssueCreated] = useState(false);
+  const [commentText, setCommentText] = useState('@pipilot-swe-agent Generate a user auth API with login and tests');
+  const [botStatus, setBotStatus] = useState<'idle' | 'thinking' | 'responded'>('idle');
+  const [botComments, setBotComments] = useState<string[]>([]);
+  const [prCreated, setPrCreated] = useState(false);
+  const [prMerged, setPrMerged] = useState(false);
+  const [activeTab, setActiveTab] = useState<'issue' | 'pr'>('issue');
+  const [isAutoPlaying, setIsAutoPlaying] = useState(false);
+  const [typingComment, setTypingComment] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+  const [showDiffViewer, setShowDiffViewer] = useState(false);
+
+  // Typing animation helper
+  const typeText = (text: string, callback: (currentText: string) => void, onComplete?: () => void) => {
+    setIsTyping(true);
+    let index = 0;
+    const speed = 30; // milliseconds per character
+    
+    const interval = setInterval(() => {
+      if (index <= text.length) {
+        callback(text.slice(0, index));
+        index++;
+      } else {
+        clearInterval(interval);
+        setIsTyping(false);
+        if (onComplete) onComplete();
+      }
+    }, speed);
+  };
+
+  const simulateCreateIssue = () => {
+    setIssueCreated(true);
+    setBotStatus('idle');
+    setBotComments([]);
+    setPrCreated(false);
+    setPrMerged(false);
+    setActiveTab('issue');
+    setShowDiffViewer(false);
+    setTypingComment('');
+  };
+
+  const simulateAddComment = () => {
+    if (!commentText || isTyping) return;
+    
+    // Simulate bot thinking
+    setBotStatus('thinking');
+    
+    setTimeout(() => {
+      // Type out first bot comment
+      const firstComment = "PiPilot SWE Agent is analyzing the request...";
+      typeText(firstComment, setTypingComment, () => {
+        setBotComments(prev => [...prev, firstComment]);
+        setTypingComment('');
+        
+        // Wait a bit, then type second comment
+        setTimeout(() => {
+          const secondComment = "I've analyzed the codebase structure and dependencies. Creating implementation files...";
+          typeText(secondComment, setTypingComment, () => {
+            setBotComments(prev => [...prev, secondComment]);
+            setTypingComment('');
+            
+            // Wait again, then type final comment
+            setTimeout(() => {
+              const thirdComment = "✓ Pull request created with full implementation: 'feature/auth-jwt' (#403).";
+              typeText(thirdComment, setTypingComment, () => {
+                setBotComments(prev => [...prev, thirdComment]);
+                setTypingComment('');
+                setBotStatus('responded');
+                setPrCreated(true);
+              });
+            }, 800);
+          });
+        }, 1200);
+      });
+    }, 1000);
+  };
+
+  const simulateViewPR = () => {
+    if (prCreated) {
+      setActiveTab('pr');
+      setTimeout(() => setShowDiffViewer(true), 300);
+    }
+  };
+
+  const simulateMergePR = () => {
+    if (!prCreated || isTyping) return;
+    setPrMerged(true);
+    
+    const mergeComment = "✓ Pull request merged successfully — deployment pipeline initiated.";
+    typeText(mergeComment, setTypingComment, () => {
+      setBotComments(prev => [...prev, mergeComment]);
+      setTypingComment('');
+    });
+  };
+
+  // Auto-play demo function
+  const autoPlayDemo = () => {
+    setIsAutoPlaying(true);
+    
+    // Step 1: Create issue
+    simulateCreateIssue();
+    
+    setTimeout(() => {
+      // Step 2: Add comment
+      simulateAddComment();
+      
+      setTimeout(() => {
+        // Step 3: View PR (wait for bot to finish)
+        simulateViewPR();
+        
+        setTimeout(() => {
+          // Step 4: Merge PR
+          simulateMergePR();
+          setIsAutoPlaying(false);
+        }, 2500);
+      }, 6000); // Wait for bot responses to complete
+    }, 1500);
+  };
+
   return (
     <div className="min-h-screen bg-[#030305] text-white overflow-x-hidden selection:bg-purple-500 selection:text-white font-sans">
       <CustomCursor />
@@ -483,67 +603,210 @@ export default function Home() {
                           </div>
                         </div>
 
-                        <div className="space-y-3">
-                          <div className="flex items-center gap-2 text-sm">
-                            <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                            <span className="text-gray-300">Analyzing codebase structure...</span>
-                          </div>
-                          <div className="flex items-center gap-2 text-sm">
-                            <CheckCircle className="w-4 h-4 text-green-400" />
-                            <span className="text-gray-300">Found authentication patterns in existing code</span>
-                          </div>
-                          <div className="flex items-center gap-2 text-sm">
-                            <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
-                            <span className="text-gray-300">Generating JWT authentication middleware...</span>
-                          </div>
-                        </div>
+                            <div className="space-y-3">
+                            <div className="flex items-center gap-2 text-sm">
+                              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                              <span className="text-gray-300">Analyzing codebase structure...</span>
+                            </div>
 
-                        {/* Progress Bar */}
-                        <div className="mt-4">
-                          <div className="flex justify-between text-xs text-gray-400 mb-1">
-                            <span>Implementation Progress</span>
-                            <span>75%</span>
-                          </div>
-                          <div className="w-full bg-gray-700 rounded-full h-2">
-                            <div className="bg-gradient-to-r from-purple-600 to-cyan-600 h-2 rounded-full animate-pulse" style={{width: '75%'}}></div>
-                          </div>
-                        </div>
-                      </div>
+                            {/* Simulated user comment and bot replies */}
+                            <div className="mt-3">
+                              {!issueCreated ? (
+                                <div className="text-xs text-gray-400">No issue created yet. Use the controls to simulate creating an issue and mentioning the bot.</div>
+                              ) : (
+                                <div className="space-y-2">
+                                  <div className="text-sm text-gray-300">User comment:</div>
+                                  <div className="bg-black/40 p-2 rounded-md text-sm text-gray-200">{commentText}</div>
 
-                      {/* Code Preview */}
-                      <div className="bg-[#0d1117] rounded-lg border border-white/10 overflow-hidden">
-                        <div className="flex items-center justify-between px-4 py-2 bg-[#161b22] border-b border-white/10">
-                          <div className="flex items-center gap-2">
-                            <div className="w-3 h-3 rounded-full bg-red-500/50"></div>
-                            <div className="w-3 h-3 rounded-full bg-yellow-500/50"></div>
-                            <div className="w-3 h-3 rounded-full bg-green-500/50"></div>
-                            <span className="text-xs text-gray-400 ml-2 font-mono">auth.js</span>
+                                  <div className="mt-2">
+                                    <div className="text-sm text-gray-300 mb-1">Bot activity:</div>
+                                    <div className="space-y-2">
+                                      {botStatus === 'thinking' && (
+                                        <div className="flex items-center gap-2 text-sm text-gray-300">
+                                          <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse" />
+                                          <span>PiPilot SWE Agent is thinking...</span>
+                                        </div>
+                                      )}
+
+                                      {/* Show typing animation */}
+                                      {isTyping && typingComment && (
+                                        <div className="flex items-center gap-2 text-sm text-cyan-300">
+                                          <Bot className="w-4 h-4 text-purple-400" />
+                                          <span>{typingComment}<span className="animate-pulse">|</span></span>
+                                        </div>
+                                      )}
+
+                                      {botComments.map((c, i) => (
+                                        <div key={i} className="flex items-center gap-2 text-sm text-gray-300">
+                                          <CheckCircle className="w-4 h-4 text-green-400" />
+                                          <span>{c}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Progress Bar */}
+                            <div className="mt-4">
+                              <div className="flex justify-between text-xs text-gray-400 mb-1">
+                                <span>Implementation Progress</span>
+                                <span>{prCreated ? (prMerged ? 'Merged' : 'PR Created') : '0%'}</span>
+                              </div>
+                              <div className="w-full bg-gray-700 rounded-full h-2">
+                                <div className="bg-gradient-to-r from-purple-600 to-cyan-600 h-2 rounded-full animate-pulse" style={{width: prCreated ? (prMerged ? '100%' : '85%') : '5%'}}></div>
+                              </div>
+                            </div>
+
+                            {/* Sim Controls */}
+                            <div className="mt-4 space-y-2">
+                              {!issueCreated ? (
+                                <div className="flex flex-wrap gap-2">
+                                  <button onClick={simulateCreateIssue} className="px-4 py-2 bg-white/6 hover:bg-white/10 rounded-md text-sm transition-all" disabled={isAutoPlaying}>Create Issue</button>
+                                  <button onClick={autoPlayDemo} disabled={isAutoPlaying} className="px-4 py-2 bg-gradient-to-r from-purple-600 to-cyan-600 hover:from-purple-700 hover:to-cyan-700 rounded-md text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                                    {isAutoPlaying ? 'Playing Demo...' : '▶ Play Full Demo'}
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="space-y-2">
+                                  <div className="flex flex-col gap-1">
+                                    <div className="flex items-center gap-2">
+                                      <input 
+                                        value={commentText} 
+                                        onChange={(e) => setCommentText(e.target.value)} 
+                                        placeholder="Type '@pipilot-swe-agent' followed by your task..."
+                                        className="flex-1 bg-black/30 px-3 py-2 rounded-md text-sm text-gray-200 border border-white/10 focus:border-cyan-500/50 focus:outline-none transition-all" 
+                                        disabled={isTyping || isAutoPlaying}
+                                      />
+                                      <button onClick={simulateAddComment} disabled={isTyping || isAutoPlaying} className="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 rounded-md text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed">Add Comment</button>
+                                    </div>
+                                    <div className="text-xs text-gray-500 italic">💡 Tip: Mention @pipilot-swe-agent in your comment to trigger the bot</div>
+                                  </div>
+                                  <div className="flex gap-2">
+                                    <button onClick={simulateViewPR} className={`px-4 py-2 rounded-md text-sm transition-all ${prCreated ? 'bg-purple-600 hover:bg-purple-700' : 'bg-white/6 cursor-not-allowed'}`} disabled={!prCreated || isAutoPlaying}>View PR</button>
+                                    {prCreated && !prMerged && (
+                                      <button onClick={simulateMergePR} disabled={isTyping || isAutoPlaying} className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-md text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed">Merge PR</button>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
                           </div>
-                          <span className="text-xs text-gray-500">Generated by PiPilot</span>
+
+                      {/* Code Preview or PR View */}
+                      {activeTab === 'pr' ? (
+                        <div className="bg-[#0d1117] rounded-lg border border-white/10 overflow-hidden p-4">
+                          <div className="flex items-center justify-between mb-4">
+                            <div>
+                              <div className="text-sm font-semibold text-white">PR: Implement user authentication (feature/auth-jwt)</div>
+                              <div className="text-xs text-gray-400">Opened by PiPilot SWE Agent • branch: feature/auth-jwt • #403</div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button onClick={simulateMergePR} disabled={prMerged || isTyping || isAutoPlaying} className={`px-3 py-2 rounded-md text-sm transition-all ${prMerged ? 'bg-gray-700/30 text-gray-300' : 'bg-green-600 hover:bg-green-700 text-white disabled:opacity-50'}`}>{prMerged ? '✓ Merged' : 'Merge PR'}</button>
+                            </div>
+                          </div>
+
+                          <div className="bg-[#0b1220] rounded-md p-4 text-sm text-gray-200">
+                            <div className="mb-3 font-mono text-xs text-gray-400 flex items-center justify-between">
+                              <span>Files changed (3)</span>
+                              <button onClick={() => setShowDiffViewer(!showDiffViewer)} className="text-cyan-400 hover:text-cyan-300 transition-all">
+                                {showDiffViewer ? 'Hide' : 'Show'} Diffs
+                              </button>
+                            </div>
+                            
+                            {!showDiffViewer ? (
+                              <div className="space-y-2">
+                                <div className="bg-black/30 rounded-md p-2 border-l-2 border-green-500">+ src/middleware/auth.js <span className="text-green-400">(+120 lines)</span></div>
+                                <div className="bg-black/30 rounded-md p-2 border-l-2 border-green-500">+ src/routes/login.js <span className="text-green-400">(+40 lines)</span></div>
+                                <div className="bg-black/30 rounded-md p-2 border-l-2 border-green-500">+ tests/auth.test.js <span className="text-green-400">(+28 lines)</span></div>
+                              </div>
+                            ) : (
+                              <div className="space-y-4">
+                                {/* File 1 Diff */}
+                                <div className="border border-white/10 rounded-md overflow-hidden">
+                                  <div className="bg-[#161b22] px-3 py-2 text-xs font-mono flex items-center gap-2">
+                                    <span className="text-gray-400">src/middleware/auth.js</span>
+                                    <span className="text-green-400">+120</span>
+                                  </div>
+                                  <div className="font-mono text-xs">
+                                    <div className="bg-green-900/20 border-l-2 border-green-500 px-3 py-1 text-green-300"><span className="text-green-600 mr-2">+1</span>const jwt = require('jsonwebtoken');</div>
+                                    <div className="bg-green-900/20 border-l-2 border-green-500 px-3 py-1 text-green-300"><span className="text-green-600 mr-2">+2</span>const bcrypt = require('bcryptjs');</div>
+                                    <div className="bg-green-900/20 border-l-2 border-green-500 px-3 py-1 text-green-300"><span className="text-green-600 mr-2">+3</span></div>
+                                    <div className="bg-green-900/20 border-l-2 border-green-500 px-3 py-1 text-green-300"><span className="text-green-600 mr-2">+4</span>const authenticateToken = async (req, res, next) =&gt; {'{'}</div>
+                                    <div className="bg-green-900/20 border-l-2 border-green-500 px-3 py-1 text-green-300"><span className="text-green-600 mr-2">+5</span>  const token = req.headers['authorization'];</div>
+                                    <div className="px-3 py-1 text-gray-500"><span className="mr-2">...</span>// +115 more lines</div>
+                                  </div>
+                                </div>
+
+                                {/* File 2 Diff */}
+                                <div className="border border-white/10 rounded-md overflow-hidden">
+                                  <div className="bg-[#161b22] px-3 py-2 text-xs font-mono flex items-center gap-2">
+                                    <span className="text-gray-400">src/routes/login.js</span>
+                                    <span className="text-green-400">+40</span>
+                                  </div>
+                                  <div className="font-mono text-xs">
+                                    <div className="bg-green-900/20 border-l-2 border-green-500 px-3 py-1 text-green-300"><span className="text-green-600 mr-2">+1</span>router.post('/login', async (req, res) =&gt; {'{'}</div>
+                                    <div className="bg-green-900/20 border-l-2 border-green-500 px-3 py-1 text-green-300"><span className="text-green-600 mr-2">+2</span>  const {'{'} username, password {'}'} = req.body;</div>
+                                    <div className="bg-green-900/20 border-l-2 border-green-500 px-3 py-1 text-green-300"><span className="text-green-600 mr-2">+3</span>  // Validate user credentials</div>
+                                    <div className="px-3 py-1 text-gray-500"><span className="mr-2">...</span>// +37 more lines</div>
+                                  </div>
+                                </div>
+
+                                {/* File 3 Diff */}
+                                <div className="border border-white/10 rounded-md overflow-hidden">
+                                  <div className="bg-[#161b22] px-3 py-2 text-xs font-mono flex items-center gap-2">
+                                    <span className="text-gray-400">tests/auth.test.js</span>
+                                    <span className="text-green-400">+28</span>
+                                  </div>
+                                  <div className="font-mono text-xs">
+                                    <div className="bg-green-900/20 border-l-2 border-green-500 px-3 py-1 text-green-300"><span className="text-green-600 mr-2">+1</span>describe('Authentication', () =&gt; {'{'}</div>
+                                    <div className="bg-green-900/20 border-l-2 border-green-500 px-3 py-1 text-green-300"><span className="text-green-600 mr-2">+2</span>  it('should login with valid credentials', async () =&gt; {'{'}</div>
+                                    <div className="bg-green-900/20 border-l-2 border-green-500 px-3 py-1 text-green-300"><span className="text-green-600 mr-2">+3</span>    const response = await request(app)</div>
+                                    <div className="px-3 py-1 text-gray-500"><span className="mr-2">...</span>// +25 more lines</div>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                            
+                            <div className="mt-4 text-gray-400">{prMerged ? '✓ This pull request was merged successfully.' : 'Ready for review — click Merge to complete.'}</div>
+                          </div>
                         </div>
-                        <div className="p-4 font-mono text-sm">
-                          <div className="flex gap-2 text-pink-400">
-                            <span>const</span>
-                            <span className="text-blue-400">jwt</span>
-                            <span>=</span>
-                            <span className="text-yellow-300">require</span>
-                            <span className="text-green-400">('jsonwebtoken')</span>;
+                      ) : (
+                        <div className="bg-[#0d1117] rounded-lg border border-white/10 overflow-hidden">
+                          <div className="flex items-center justify-between px-4 py-2 bg-[#161b22] border-b border-white/10">
+                            <div className="flex items-center gap-2">
+                              <div className="w-3 h-3 rounded-full bg-red-500/50"></div>
+                              <div className="w-3 h-3 rounded-full bg-yellow-500/50"></div>
+                              <div className="w-3 h-3 rounded-full bg-green-500/50"></div>
+                              <span className="text-xs text-gray-400 ml-2 font-mono">auth.js</span>
+                            </div>
+                            <span className="text-xs text-gray-500">Generated by PiPilot</span>
                           </div>
-                          <br />
-                          <div className="flex gap-2 text-pink-400">
-                            <span>const</span>
-                            <span className="text-blue-400">authenticateToken</span>
-                            <span>=</span>
-                            <span className="text-yellow-300">async</span>
-                            <span className="text-green-400">(req, res, next)</span>
-                            <span>{'=>'}</span>
-                            <span className="text-white">{'{'}</span>
-                          </div>
-                          <div className="ml-4 text-gray-400">
-                            // PiPilot: JWT middleware for secure authentication
+                          <div className="p-4 font-mono text-sm">
+                            <div className="flex gap-2 text-pink-400">
+                              <span>const</span>
+                              <span className="text-blue-400">jwt</span>
+                              <span>=</span>
+                              <span className="text-yellow-300">require</span>
+                              <span className="text-green-400">('jsonwebtoken')</span>;
+                            </div>
+                            <br />
+                            <div className="flex gap-2 text-pink-400">
+                              <span>const</span>
+                              <span className="text-blue-400">authenticateToken</span>
+                              <span>=</span>
+                              <span className="text-yellow-300">async</span>
+                              <span className="text-green-400">(req, res, next)</span>
+                              <span>{'=>'}</span>
+                              <span className="text-white">{'{'}</span>
+                            </div>
+                            <div className="ml-4 text-gray-400">
+                              // PiPilot: JWT middleware for secure authentication
+                            </div>
                           </div>
                         </div>
-                      </div>
+                      )}
                     </div>
 
                     {/* Status Badge */}
@@ -551,7 +814,7 @@ export default function Home() {
                       <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                       <span className="text-sm font-bold">PiPilot Active</span>
                     </div>
-                  </div>
+                  </div></div>
                 </TiltCard>
               </div>
             </Reveal>

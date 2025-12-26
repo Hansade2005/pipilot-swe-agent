@@ -6,6 +6,7 @@ import { Button } from "@/app/components/ui/button"
 import { Badge } from "@/app/components/ui/badge"
 import { Check, Loader2, Sparkles, Github, Crown, Zap, Shield } from "lucide-react"
 import { motion } from 'framer-motion';
+import { STRIPE_PRICES } from "@/lib/stripe"
 
 const PLANS = [
   {
@@ -15,7 +16,7 @@ const PLANS = [
     monthlyTasks: 10,
     supportLevel: 'community',
     features: ['Basic projects', 'Community support', '10 tasks/month'],
-    stripePriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_FREE || 'price_1SiIwD3G7U0M1bp1FrBOA3KB',
+    stripePriceId: STRIPE_PRICES.FREE,
     description: 'Perfect for getting started',
     isPopular: false,
   },
@@ -26,7 +27,7 @@ const PLANS = [
     monthlyTasks: 150,
     supportLevel: 'priority',
     features: ['All models', 'Advanced projects', 'Custom templates', 'Premium AI models', 'Priority support', '150 tasks/month'],
-    stripePriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_MONTHLY || 'price_1SiIwD3G7U0M1bp1Vc3ndopi',
+    stripePriceId: STRIPE_PRICES.PRO_MONTHLY,
     description: 'Most popular choice',
     isPopular: true,
   },
@@ -37,7 +38,7 @@ const PLANS = [
     monthlyTasks: 170,
     supportLevel: 'priority',
     features: ['All models', 'Advanced projects', 'Custom templates', 'Premium AI models', 'Priority support', '170 tasks/month', 'Save 20% annually'],
-    stripePriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_ANNUAL || 'price_1SiIwE3G7U0M1bp1auNQbKID',
+    stripePriceId: STRIPE_PRICES.PRO_ANNUAL,
     description: 'Best value for power users',
     isPopular: false,
   },
@@ -48,7 +49,7 @@ const PLANS = [
     monthlyTasks: 150,
     supportLevel: 'one-time',
     features: ['150 additional tasks', 'One-time purchase', 'No expiration', 'Instant activation'],
-    stripePriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_CREDITS_150 || 'price_1SiIwF3G7U0M1bp1yfI4CgyQ',
+    stripePriceId: STRIPE_PRICES.CREDITS_150,
     description: 'Need more tasks?',
     isPopular: false,
   },
