@@ -4,7 +4,8 @@ import { useSearchParams } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { Button } from "@/app/components/ui/button"
 import { Badge } from "@/app/components/ui/badge"
-import { Check, Loader2, Sparkles } from "lucide-react"
+import { Check, Loader2, Sparkles, Github, Crown, Zap, Shield } from "lucide-react"
+import { motion } from 'framer-motion';
 
 const PLANS = [
   {
@@ -118,111 +119,287 @@ export default function SetupForm() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {!user ? (
-        <div className="text-center">
-          <div className="mb-6">
-            <h3 className="text-xl font-semibold text-white mb-2">Connect Your GitHub</h3>
-            <p className="text-gray-400 text-sm">
-              We need to identify you via GitHub to set up your subscription.
-            </p>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="text-center"
+        >
+          <div className="mb-8">
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+              className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-purple-600/20 to-cyan-600/20 rounded-2xl mb-6 border border-purple-500/30"
+            >
+              <Github className="w-10 h-10 text-purple-400" />
+            </motion.div>
+
+            <motion.h3
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.3 }}
+              className="text-2xl font-bold text-white mb-3"
+            >
+              Connect Your GitHub
+            </motion.h3>
+
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.4 }}
+              className="text-gray-400 text-base max-w-md mx-auto leading-relaxed"
+            >
+              Link your GitHub account to unlock AI-powered code generation and seamless project management.
+            </motion.p>
           </div>
 
-          <Button
-            onClick={handleOAuth}
-            className="w-full bg-gradient-to-r from-gray-700 to-gray-600 hover:from-gray-600 hover:to-gray-500 text-white border border-gray-600/50 transition-all duration-200 hover:border-purple-500/50 hover:shadow-lg hover:shadow-purple-500/20"
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+            className="relative"
           >
-            <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
-            </svg>
-            Authorize with GitHub
-          </Button>
-        </div>
+            <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 via-pink-600 to-cyan-600 rounded-2xl blur-lg opacity-30 animate-pulse" />
+            <Button
+              onClick={handleOAuth}
+              className="relative w-full bg-gradient-to-r from-gray-900 to-gray-800 hover:from-gray-800 hover:to-gray-700 text-white border border-gray-600/50 hover:border-purple-500/70 transition-all duration-300 hover:shadow-xl hover:shadow-purple-500/20 py-4 text-lg font-semibold group"
+            >
+              <Github className="w-6 h-6 mr-3 group-hover:scale-110 transition-transform" />
+              <span>Authorize with GitHub</span>
+              <motion.div
+                className="absolute inset-0 bg-gradient-to-r from-purple-600/10 to-cyan-600/10 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity"
+                layoutId="buttonGlow"
+              />
+            </Button>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.6 }}
+            className="mt-6 flex items-center justify-center space-x-6 text-sm text-gray-500"
+          >
+            <div className="flex items-center space-x-2">
+              <Shield className="w-4 h-4 text-green-400" />
+              <span>Secure OAuth</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Check className="w-4 h-4 text-green-400" />
+              <span>Read-only access</span>
+            </div>
+          </motion.div>
+        </motion.div>
       ) : (
         <>
-          {/* Welcome Message */}
-          <div className="text-center mb-6">
-            <div className="inline-flex items-center space-x-2 bg-green-500/10 border border-green-500/20 rounded-full px-4 py-2 mb-4">
-              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-              <span className="text-green-400 text-sm font-medium">Connected as {user.login}</span>
-            </div>
-            <h3 className="text-xl font-semibold text-white mb-2">Choose Your Plan</h3>
-            <p className="text-gray-400 text-sm">
-              Select the plan that fits your development needs
-            </p>
-          </div>
+          {/* Enhanced Welcome Message */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="text-center mb-8"
+          >
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+              className="inline-flex items-center space-x-3 bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/20 rounded-full px-6 py-3 mb-6"
+            >
+              <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse" />
+              <span className="text-green-400 font-medium">Connected as @{user.login}</span>
+              <Check className="w-4 h-4 text-green-400" />
+            </motion.div>
 
-          {/* Pricing Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {PLANS.map((plan) => (
-              <div
+            <motion.h3
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.3 }}
+              className="text-3xl font-bold text-white mb-3"
+            >
+              Choose Your Plan
+            </motion.h3>
+
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.4 }}
+              className="text-gray-400 text-lg max-w-lg mx-auto leading-relaxed"
+            >
+              Select the perfect plan to supercharge your development workflow with AI
+            </motion.p>
+          </motion.div>
+
+          {/* Enhanced Pricing Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {PLANS.map((plan, index) => (
+              <motion.div
                 key={plan.id}
-                className={`relative p-6 rounded-xl border cursor-pointer transition-all duration-300 hover:scale-105 ${
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 * index, duration: 0.5 }}
+                className={`relative p-8 rounded-2xl border cursor-pointer transition-all duration-500 group ${
                   selectedPlan === plan.id
-                    ? 'bg-gradient-to-br from-purple-900/40 to-cyan-900/40 border-purple-500/50 shadow-lg shadow-purple-500/20'
-                    : 'bg-gray-800/40 border-gray-700/50 hover:border-purple-500/30 hover:shadow-md hover:shadow-purple-500/10'
+                    ? 'bg-gradient-to-br from-purple-900/40 via-pink-900/30 to-cyan-900/40 border-purple-500/60 shadow-2xl shadow-purple-500/20 scale-105'
+                    : 'bg-gray-800/40 border-gray-700/50 hover:border-purple-500/40 hover:shadow-xl hover:shadow-purple-500/10 hover:scale-102'
                 }`}
                 onClick={() => setSelectedPlan(plan.id)}
               >
+                {/* Animated background glow */}
+                <div className={`absolute inset-0 rounded-2xl transition-opacity duration-500 ${
+                  selectedPlan === plan.id
+                    ? 'bg-gradient-to-br from-purple-600/10 via-pink-600/5 to-cyan-600/10 opacity-100'
+                    : 'opacity-0 group-hover:opacity-50'
+                }`} />
+
+                {/* Popular badge */}
                 {plan.isPopular && (
-                  <div className="absolute -top-2 left-1/2 transform -translate-x-1/2">
-                    <Badge className="bg-gradient-to-r from-purple-600 to-cyan-600 text-white px-3 py-1 text-xs font-medium">
-                      <Sparkles className="w-3 h-3 mr-1" />
-                      Popular
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="absolute -top-3 left-1/2 transform -translate-x-1/2 z-10"
+                  >
+                    <Badge className="bg-gradient-to-r from-purple-600 via-pink-600 to-cyan-600 text-white px-4 py-2 text-sm font-semibold shadow-lg">
+                      <Crown className="w-4 h-4 mr-2" />
+                      Most Popular
                     </Badge>
-                  </div>
+                  </motion.div>
                 )}
 
-                <div className="text-center mb-4">
-                  <h4 className="text-lg font-semibold text-white mb-1">{plan.name}</h4>
-                  <p className="text-gray-400 text-sm">{plan.description}</p>
-                </div>
+                <div className="relative z-10">
+                  {/* Plan header */}
+                  <div className="text-center mb-6">
+                    <motion.div
+                      className={`inline-flex items-center justify-center w-12 h-12 rounded-xl mb-4 ${
+                        plan.id === 'free' ? 'bg-gray-700/50' :
+                        plan.id.includes('pro') ? 'bg-gradient-to-r from-purple-600 to-cyan-600' :
+                        'bg-gradient-to-r from-orange-600 to-yellow-600'
+                      }`}
+                      whileHover={{ rotate: 360 }}
+                      transition={{ duration: 0.6 }}
+                    >
+                      {plan.id === 'free' ? <Sparkles className="w-6 h-6 text-gray-300" /> :
+                       plan.id.includes('pro') ? <Zap className="w-6 h-6 text-white" /> :
+                       <Shield className="w-6 h-6 text-white" />}
+                    </motion.div>
 
-                <div className="text-center mb-4">
-                  <div className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-white to-purple-200">
-                    {plan.price}
+                    <h4 className="text-xl font-bold text-white mb-2">{plan.name}</h4>
+                    <p className="text-gray-400 text-sm">{plan.description}</p>
                   </div>
-                </div>
 
-                <div className="space-y-2 mb-6">
-                  {plan.features.map((feature, featureIndex) => (
-                    <div key={featureIndex} className="flex items-center space-x-2">
-                      <Check className="w-4 h-4 text-green-400 flex-shrink-0" />
-                      <span className="text-gray-300 text-sm">{feature}</span>
+                  {/* Pricing */}
+                  <div className="text-center mb-6">
+                    <div className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-purple-200 to-cyan-200 mb-1">
+                      {plan.price}
                     </div>
-                  ))}
-                </div>
+                    {plan.id.includes('annual') && (
+                      <div className="text-sm text-green-400 font-medium">Save 20% annually</div>
+                    )}
+                  </div>
 
-                <Button
-                  className={`w-full transition-all duration-200 ${
-                    selectedPlan === plan.id
-                      ? 'bg-gradient-to-r from-purple-600 to-cyan-600 hover:from-purple-700 hover:to-cyan-700 text-white shadow-lg shadow-purple-500/30'
-                      : 'bg-gray-700/50 hover:bg-gray-600/50 text-gray-300 border border-gray-600/50 hover:border-purple-500/30'
-                  }`}
-                  variant={selectedPlan === plan.id ? 'default' : 'outline'}
-                >
-                  {selectedPlan === plan.id ? 'Selected' : 'Select Plan'}
-                </Button>
-              </div>
+                  {/* Features */}
+                  <div className="space-y-3 mb-8">
+                    {plan.features.map((feature, featureIndex) => (
+                      <motion.div
+                        key={featureIndex}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.1 * featureIndex }}
+                        className="flex items-center space-x-3"
+                      >
+                        <div className="w-5 h-5 bg-green-500/20 rounded-full flex items-center justify-center flex-shrink-0">
+                          <Check className="w-3 h-3 text-green-400" />
+                        </div>
+                        <span className="text-gray-300 text-sm leading-relaxed">{feature}</span>
+                      </motion.div>
+                    ))}
+                  </div>
+
+                  {/* Selection button */}
+                  <motion.div
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <Button
+                      className={`w-full py-3 text-base font-semibold transition-all duration-300 ${
+                        selectedPlan === plan.id
+                          ? 'bg-gradient-to-r from-purple-600 to-cyan-600 hover:from-purple-700 hover:to-cyan-700 text-white shadow-lg shadow-purple-500/30'
+                          : 'bg-gray-700/50 hover:bg-gray-600/50 text-gray-300 border border-gray-600/50 hover:border-purple-500/50 hover:shadow-md hover:shadow-purple-500/20'
+                      }`}
+                      variant={selectedPlan === plan.id ? 'default' : 'outline'}
+                    >
+                      {selectedPlan === plan.id ? (
+                        <motion.div
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          className="flex items-center justify-center"
+                        >
+                          <Check className="w-5 h-5 mr-2" />
+                          Selected
+                        </motion.div>
+                      ) : (
+                        'Select Plan'
+                      )}
+                    </Button>
+                  </motion.div>
+                </div>
+              </motion.div>
             ))}
           </div>
 
-          {/* Subscribe Button */}
-          <div className="text-center pt-4">
-            <Button
-              onClick={handleSubscribe}
-              disabled={loading}
-              className="w-full bg-gradient-to-r from-purple-600 to-cyan-600 hover:from-purple-700 hover:to-cyan-700 text-white py-3 text-lg font-semibold shadow-lg shadow-purple-500/30 hover:shadow-xl hover:shadow-purple-500/40 transition-all duration-200"
-              size="lg"
-            >
-              {loading && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
-              {loading ? 'Processing...' : selectedPlan === 'free' ? 'Get Started Free' : 'Subscribe Now'}
-            </Button>
+          {/* Enhanced Subscribe Button */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.8 }}
+            className="text-center pt-6"
+          >
+            <div className="relative mb-4">
+              <div className="absolute -inset-2 bg-gradient-to-r from-purple-600 via-pink-600 to-cyan-600 rounded-2xl blur-xl opacity-20 animate-pulse" />
+              <Button
+                onClick={handleSubscribe}
+                disabled={loading}
+                className="relative w-full bg-gradient-to-r from-purple-600 via-pink-600 to-cyan-600 hover:from-purple-700 hover:via-pink-700 hover:to-cyan-700 text-white py-4 text-xl font-bold shadow-2xl shadow-purple-500/30 hover:shadow-3xl hover:shadow-purple-500/50 transition-all duration-300 group"
+                size="lg"
+              >
+                {loading ? (
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                    className="flex items-center justify-center"
+                  >
+                    <Loader2 className="mr-3 h-6 w-6 animate-spin" />
+                    Processing Payment...
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    className="flex items-center justify-center"
+                    whileHover={{ scale: 1.05 }}
+                  >
+                    <Sparkles className="mr-3 h-6 w-6 group-hover:rotate-12 transition-transform" />
+                    {selectedPlan === 'free' ? 'Get Started Free' : 'Subscribe Now'}
+                  </motion.div>
+                )}
+              </Button>
+            </div>
 
-            <p className="mt-3 text-xs text-gray-500">
-              Secure payment powered by Stripe
-            </p>
-          </div>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 1 }}
+              className="flex items-center justify-center space-x-4 text-sm text-gray-500"
+            >
+              <div className="flex items-center space-x-2">
+                <Shield className="w-4 h-4 text-green-400" />
+                <span>Secure payment via Stripe</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Check className="w-4 h-4 text-green-400" />
+                <span>Cancel anytime</span>
+              </div>
+            </motion.div>
+          </motion.div>
         </>
       )}
     </div>

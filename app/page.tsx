@@ -263,7 +263,7 @@ export default function Home() {
       <nav className="fixed top-0 w-full z-50 transition-all duration-300 py-6 backdrop-blur-md bg-black/30 border-b border-white/5">
         <div className="container mx-auto px-6 flex justify-between items-center">
           <Link href="#" className="flex items-center gap-2 group">
-             <Bot className="text-white w-6 h-6" />
+             <img src="/logo.png" alt="PiPilot Logo" className=" w-6 h-6" />
             <span className="font-display font-bold text-xl tracking-tight text-white">PiPilot</span>
           </Link>
           
@@ -573,17 +573,21 @@ export default function Home() {
             </Reveal>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[1, 2, 3].map((item) => (
-                <Reveal key={item} delay={item * 0.1}>
+              {[
+                { src: "/screenshot1.png", title: "GitHub Issue Analysis", desc: "PiPilot analyzing and understanding issue requirements" },
+                { src: "/screenshot2.png", title: "Code Generation", desc: "AI generating production-ready code solutions" },
+                { src: "/screenshot3.png", title: "Pull Request Creation", desc: "Automated PR creation with complete implementation" }
+              ].map((screenshot, index) => (
+                <Reveal key={index} delay={index * 0.1}>
                   <div className="group relative rounded-2xl overflow-hidden cursor-pointer">
-                    <img 
-                      src={`https://picsum.photos/seed/tech${item}/600/400`} 
-                      alt="Code Editor" 
+                    <img
+                      src={screenshot.src}
+                      alt={screenshot.title}
                       className="w-full h-64 object-cover transform group-hover:scale-110 transition-transform duration-700"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-6">
-                      <h4 className="text-white font-bold translate-y-4 group-hover:translate-y-0 transition-transform duration-300">Feature Showcase {item}</h4>
-                      <p className="text-gray-300 text-sm translate-y-4 group-hover:translate-y-0 transition-transform duration-300 delay-75">Live demonstration capture.</p>
+                      <h4 className="text-white font-bold translate-y-4 group-hover:translate-y-0 transition-transform duration-300">{screenshot.title}</h4>
+                      <p className="text-gray-300 text-sm translate-y-4 group-hover:translate-y-0 transition-transform duration-300 delay-75">{screenshot.desc}</p>
                     </div>
                   </div>
                 </Reveal>
@@ -720,8 +724,7 @@ export default function Home() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
             <div className="col-span-1 md:col-span-1">
               <div className="flex items-center gap-2 mb-6">
-                <Bot className="text-white w-6 h-6 text-purple-500" />
-                <span className="font-display font-bold text-xl tracking-tight text-white">PiPilot</span>
+ <img src="/logo.png" alt="PiPilot Logo" className=" w-6 h-6" />                <span className="font-display font-bold text-xl tracking-tight text-white">PiPilot</span>
               </div>
               <p className="text-gray-500 text-sm leading-relaxed">
                 The autonomous AI agent that writes, tests, and deploys production-ready code.
