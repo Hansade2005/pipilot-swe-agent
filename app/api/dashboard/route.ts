@@ -95,28 +95,22 @@ export async function GET(request: NextRequest) {
     // Get GitHub token from Authorization header
     const authHeader = request.headers.get('authorization');
     const githubToken = authHeader?.replace('Bearer ', '');
+    
+    // Get username from query parameter
+    const { searchParams } = new URL(request.url);
+    const username = searchParams.get('username');
 
-    if (!githubToken) {
+    if (!githubToken || !username) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Fetch GitHub user info to get username
-    const gitHubUserResponse = await fetch('https://api.github.com/user', {
-      headers: { Authorization: `token ${githubToken}` }
-    });
-
-    if (!gitHubUserResponse.ok) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-    }
-
-    const gitHubUser = await gitHubUserResponse.json();
     const supabase = await createClient();
 
     // Fetch user data from our users table
     const { data: user, error: userError } = await supabase
       .from('users')
       .select('*')
-      .eq('github_username', gitHubUser.login)
+      .eq('github_username', username)
       .single();
 
     if (userError || !user) {
@@ -209,10 +203,12 @@ export async function GET(request: NextRequest) {
         plan: currentPlan,
         avatarUrl: user.avatar_url,
         subscriptionStatus: user.subscription_status,
-        stripeCustomerId: user.stripe_customer_id
+        stripeCustomerId: user.stripe_customer_id,
+        installationId: user.installation_id
       },
       usage: {
-        tasksUsed: Math.floor(totalTokensUsed / 100), // Rough estimate: 100 tokens = 1 task
+        tasksUsed: user.tasks_this_month || 0,
+        tasksRemaining: monthlyLimit - (user.tasks_this_month || 0),
         tasksLimit: monthlyLimit,
         resetDate: nextReset.toISOString().split('T')[0],
         daysUntilReset

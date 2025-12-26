@@ -175,7 +175,7 @@ export default function Dashboard() {
     try {
       // Fetch dashboard data from API endpoint (includes server-side filtered repositories)
       const githubToken = localStorage.getItem('github_token');
-      const response = await fetch('/api/dashboard', {
+      const response = await fetch(`/api/dashboard?username=${encodeURIComponent(userData.github_username)}`, {
         headers: githubToken ? { 'Authorization': `Bearer ${githubToken}` } : {}
       });
       
@@ -287,6 +287,9 @@ export default function Dashboard() {
             </div>
             <h3 className="text-2xl font-bold mb-1">{dashboardData?.usage?.tasksUsed || 0}/{dashboardData?.usage?.tasksLimit || 10}</h3>
             <p className="text-gray-400 text-sm">Tasks used this month</p>
+            {dashboardData?.usage?.tasksRemaining !== undefined && (
+              <p className="text-xs text-cyan-400 mt-1">{dashboardData.usage.tasksRemaining} remaining</p>
+            )}
             <div className="mt-3 bg-gray-800 rounded-full h-2">
               <div
                 className="bg-gradient-to-r from-purple-500 to-cyan-500 h-2 rounded-full transition-all duration-500"
