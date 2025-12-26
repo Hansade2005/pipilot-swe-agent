@@ -4,7 +4,7 @@ import Link from 'next/link';
 import {
   Rocket, CheckCircle, Bot, Code, Shield, Github,
   Layers, Sparkles, ArrowRight, Terminal, Bug, Brain, ChevronRight,
-  GitPullRequest, BookOpen, Play, AlertCircle // Added new icons
+  GitPullRequest, BookOpen, Play, AlertCircle, RotateCcw // Added new icons
 } from 'lucide-react';
 import { motion, useScroll, useTransform, useInView } from 'framer-motion';
 
@@ -323,38 +323,48 @@ export default function Home() {
     setCurrentView('issue');
     setComments([]);
 
-    // Scene 1: Issue Created
-    await new Promise(r => setTimeout(r, 1000));
+    // Scene 1: Issue Created (2 seconds)
+    await new Promise(r => setTimeout(r, 2000));
 
-    // Scene 2: Bot Analysis & Plan
+    // Scene 2: Bot Analysis & Plan (4 seconds total with typing)
     await addBotComment("I'm analyzing the codebase structure and dependencies for JWT authentication...", 'text');
-    await new Promise(r => setTimeout(r, 800));
+    await new Promise(r => setTimeout(r, 1500));
     await addBotComment("Here is the implementation plan:\n- Create `auth/middleware.js`\n- Add login endpoint in `routes/login.js`\n- Write tests in `tests/auth.test.js`", 'plan');
 
-    // Scene 3: Completion
-    await new Promise(r => setTimeout(r, 1500));
+    // Scene 3: Completion (2 seconds before moving forward)
+    await new Promise(r => setTimeout(r, 2000));
     await addBotComment("✅ Implementation complete. Created PR #403 with full changes.", 'text');
 
-    // Scene 4: Navigate to PR List
-    await new Promise(r => setTimeout(r, 1500));
+    // Scene 4: Navigate to PR List (3.5 seconds)
+    await new Promise(r => setTimeout(r, 3500));
     setCurrentView('pr-list');
 
-    // Scene 5: Open PR
-    await new Promise(r => setTimeout(r, 2000));
+    // Scene 5: Open PR (4.5 seconds)
+    await new Promise(r => setTimeout(r, 4500));
     setCurrentView('pr-detail');
     setActiveTab('conversation');
 
-    // Scene 6: Switch to Files
-    await new Promise(r => setTimeout(r, 2500));
+    // Scene 6: Switch to Files (5.5 seconds)
+    await new Promise(r => setTimeout(r, 5500));
     setActiveTab('files');
 
-    // Scene 7: Back to Conversation
-    await new Promise(r => setTimeout(r, 4000));
+    // Scene 7: Back to Conversation (8 seconds)
+    await new Promise(r => setTimeout(r, 8000));
     setActiveTab('conversation');
 
-    // Scene 8: Merge
+    // Scene 8: Merge (2 seconds)
     await new Promise(r => setTimeout(r, 2000));
     setStep(8); // Merged State
+    setIsAutoPlaying(false);
+  };
+
+  const resetSimulation = () => {
+    setStep(0);
+    setCurrentView('issue');
+    setActiveTab('conversation');
+    setComments([]);
+    setTypingText('');
+    setBotTyping(false);
     setIsAutoPlaying(false);
   };
 
@@ -721,10 +731,20 @@ export default function Home() {
                                 <div className="text-sm text-gray-300 mb-4">Adding full JWT support with tests.</div>
 
                                 {step >= 8 ? (
-                                  <div className="bg-purple-900/20 border border-purple-500/30 rounded-lg p-4 text-center animate-in fade-in duration-500">
-                                    <CheckCircle className="w-8 h-8 text-purple-500 mx-auto mb-2" />
-                                    <div className="text-white font-semibold">Pull request merged successfully</div>
-                                    <div className="text-xs text-gray-400 mt-1">Branch feature/auth-jwt deleted</div>
+                                  <div className="space-y-4">
+                                    <div className="bg-purple-900/20 border border-purple-500/30 rounded-lg p-4 text-center animate-in fade-in duration-500">
+                                      <CheckCircle className="w-8 h-8 text-purple-500 mx-auto mb-2" />
+                                      <div className="text-white font-semibold">Pull request merged successfully</div>
+                                      <div className="text-xs text-gray-400 mt-1">Branch feature/auth-jwt deleted</div>
+                                    </div>
+                                    <div className="flex justify-center gap-3">
+                                      <button onClick={resetSimulation} className="px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-md text-sm font-bold transition-all shadow-lg shadow-purple-500/20 flex items-center gap-2">
+                                        <RotateCcw className="w-4 h-4" /> Replay Simulation
+                                      </button>
+                                      <button className="px-6 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-md text-sm font-bold transition-all">
+                                        Visit Repository
+                                      </button>
+                                    </div>
                                   </div>
                                 ) : (
                                   <div className="flex justify-end mt-8">
