@@ -353,40 +353,7 @@ export default function Dashboard() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Recent Activity */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.4 }}
-            className="bg-gray-900/50 backdrop-blur-sm border border-gray-800/50 rounded-xl p-6"
-          >
-            <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
-              <BarChart3 className="w-5 h-5" />
-              Recent Activity
-            </h2>
-
-            <div className="space-y-4">
-              {dashboardData?.recentActivity?.length > 0 ? dashboardData.recentActivity.map((activity, index) => (
-                <div key={index} className="flex items-start gap-3 p-3 bg-gray-800/30 rounded-lg">
-                  <div className="p-2 bg-purple-500/20 rounded-lg">
-                    {activity.type === 'code_generation' && <Code className="w-4 h-4 text-purple-400" />}
-                    {activity.type === 'pr_review' && <CheckCircle className="w-4 h-4 text-green-400" />}
-                    {activity.type === 'issue_analysis' && <Github className="w-4 h-4 text-blue-400" />}
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">{activity.description}</p>
-                    <p className="text-xs text-gray-400">{activity.repo} • {activity.time}</p>
-                  </div>
-                </div>
-              )) : (
-                <div className="text-center py-8 text-gray-400">
-                  <Bot className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p>No recent activity yet</p>
-                  <p className="text-sm">Start using PiPilot SWE Agent to see your activity here</p>
-                </div>
-              )}
-            </div>
-          </motion.div>
+         
 
           {/* How to Use PiPilot */}
           <motion.div
