@@ -477,20 +477,20 @@ export default function Dashboard() {
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {dashboardData?.repositories?.length > 0 ? dashboardData.repositories.map((repo, index) => (
-              <div key={index} className="p-4 bg-gray-800/30 rounded-lg border border-gray-700/50">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-medium truncate">{repo.name}</h3>
-                  {repo.private ? (
-                    <span className="text-xs bg-red-500/20 text-red-400 px-2 py-1 rounded">Private</span>
-                  ) : (
-                    <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded">Public</span>
-                  )}
+            {dashboardData?.installations && dashboardData.installations.length > 0 ? (
+              dashboardData.installations.map((installation, index) => (
+                <div key={index} className="p-4 bg-gray-800/30 rounded-lg border border-gray-700/50">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-medium truncate">{installation.account?.login || 'Unknown'}</h3>
+                    <span className="text-xs bg-blue-500/20 text-blue-400 px-2 py-1 rounded">
+                      {installation.target_type === 'User' ? 'Personal' : 'Organization'}
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-400 mb-2">{installation.repository_selection === 'all' ? 'All repositories' : 'Selected repositories'}</p>
+                  <p className="text-xs text-gray-500">Installation ID: {installation.installation_id}</p>
                 </div>
-                <p className="text-sm text-gray-400 mb-2">{repo.full_name}</p>
-                <p className="text-xs text-gray-500">Last activity: {repo.lastActivity || 'Never'}</p>
-              </div>
-            )) : (
+              ))
+            ) : (
               <div className="col-span-full text-center py-8 text-gray-400">
                 <Github className="w-12 h-12 mx-auto mb-4 opacity-50" />
                 <p>No repositories connected yet</p>
