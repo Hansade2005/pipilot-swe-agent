@@ -723,8 +723,7 @@ export default function Home() {
           period: "forever",
           description: "Perfect for getting started",
           features: [
-            "10 tasks/month",
-            "Basic AI models",
+            "10 Credits/month",
             "Community support",
             "GitHub integration"
           ],
@@ -737,14 +736,13 @@ export default function Home() {
           period: "per month",
           description: "Most popular for teams",
           features: [
-            "150 tasks/month",
+            "500 Credits/month",
             "Premium AI models",
             "Priority support",
-            "Advanced integrations",
-            "Custom templates",
-            "API access"
+            "Advanced Code Reviews",
+           
           ],
-          cta: "Start Pro Trial",
+          cta: "Select Pro",
           popular: true
         },
         {

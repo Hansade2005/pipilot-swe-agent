@@ -380,9 +380,9 @@ export default function SetupPage() {
           <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-gray-600 text-sm">© 2025 PiPilot Inc. All rights reserved.</p>
             <div className="flex gap-6">
-              <a href="#" className="text-gray-400 hover:text-white transition-colors">
-                <Github className="w-5 h-5" /></a>
-              <a href="#" className="text-gray-400 hover:text-white transition-colors"><Terminal className="w-5 h-5" /></a>
+                  <a href="https://github.com/apps/pipilot-swe-agent" className="text-gray-400 hover:text-white transition-colors">
+                    <Github className="w-5 h-5" /></a>
+                  <a href="https://pipilot.dev" className="text-gray-400 hover:text-white transition-colors"><Terminal className="w-5 h-5" /></a>
             </div>
           </div>
         </div>
