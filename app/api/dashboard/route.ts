@@ -92,20 +92,31 @@ async function getRepositoriesFromGitHub(installationId: number, authenticatedUs
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient();
+    // Get GitHub token from Authorization header
+    const authHeader = request.headers.get('authorization');
+    const githubToken = authHeader?.replace('Bearer ', '');
 
-    // Get the current user from Supabase auth
-    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !authUser) {
+    if (!githubToken) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    // Fetch GitHub user info to get username
+    const gitHubUserResponse = await fetch('https://api.github.com/user', {
+      headers: { Authorization: `token ${githubToken}` }
+    });
+
+    if (!gitHubUserResponse.ok) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    }
+
+    const gitHubUser = await gitHubUserResponse.json();
+    const supabase = await createClient();
 
     // Fetch user data from our users table
     const { data: user, error: userError } = await supabase
       .from('users')
       .select('*')
-      .eq('github_username', authUser.user_metadata?.user_name || authUser.user_metadata?.name)
+      .eq('github_username', gitHubUser.login)
       .single();
 
     if (userError || !user) {

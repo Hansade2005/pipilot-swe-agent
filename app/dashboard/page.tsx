@@ -174,7 +174,10 @@ export default function Dashboard() {
   const loadDashboardData = async (userData: User) => {
     try {
       // Fetch dashboard data from API endpoint (includes server-side filtered repositories)
-      const response = await fetch('/api/dashboard');
+      const githubToken = localStorage.getItem('github_token');
+      const response = await fetch('/api/dashboard', {
+        headers: githubToken ? { 'Authorization': `Bearer ${githubToken}` } : {}
+      });
       
       if (!response.ok) {
         console.error('Failed to fetch dashboard data:', response.status);
@@ -265,7 +268,7 @@ export default function Dashboard() {
           className="mb-8"
         >
           <h1 className="text-3xl font-bold mb-2">Dashboard</h1>
-          <p className="text-gray-400">Manage your AI-powered development workflow</p>
+          <p className="text-gray-400">Manage your SWE Agent development workflow</p>
         </motion.div>
 
         {/* Stats Cards */}
@@ -323,7 +326,7 @@ export default function Dashboard() {
             </div>
             <h3 className="text-2xl font-bold mb-1">{dashboardData?.repositories?.length || 0}</h3>
             <p className="text-gray-400 text-sm">Connected repos</p>
-            <Link href="#repositories" className="text-cyan-400 text-sm hover:text-cyan-300 mt-2 inline-block">
+            <Link href="https://github.com/settings/installations" className="text-cyan-400 text-sm hover:text-cyan-300 mt-2 inline-block">
               Manage →
             </Link>
           </motion.div>
@@ -359,7 +362,7 @@ export default function Dashboard() {
                 <div className="text-center py-8 text-gray-400">
                   <Bot className="w-12 h-12 mx-auto mb-4 opacity-50" />
                   <p>No recent activity yet</p>
-                  <p className="text-sm">Start using PiPilot to see your activity here</p>
+                  <p className="text-sm">Start using PiPilot SWE Agent to see your activity here</p>
                 </div>
               )}
             </div>
@@ -374,7 +377,7 @@ export default function Dashboard() {
           >
             <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
               <BookOpen className="w-5 h-5" />
-              How to Use PiPilot
+              How to Use PiPilot SWE Agent
             </h2>
 
             <div className="space-y-6">
@@ -403,7 +406,7 @@ export default function Dashboard() {
                 <span className="font-semibold text-purple-400">Quick Start</span>
               </div>
               <p className="text-sm text-gray-300 mb-3">
-                Watch our 2-minute tutorial to get started with PiPilot
+                Watch our 30 seconds simulation tutorial   in homepage to get started with PiPilot SWE Agent
               </p>
 
               {/* Sample mention helper */}
@@ -429,11 +432,13 @@ export default function Dashboard() {
               </div>
 
               <div className="mt-4 flex items-center gap-4">
+                <a href="/"> 
                 <button className="flex items-center gap-2 text-cyan-400 hover:text-cyan-300 text-sm font-medium">
                   <PlayCircle className="w-4 h-4" />
                   Watch Tutorial
                   <ExternalLink className="w-3 h-3" />
                 </button>
+                </a>
               </div>
             </div>
           </motion.div>
