@@ -1,26 +1,28 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { CheckCircle, Github, ArrowRight, Home, Zap } from 'lucide-react';
 
-export default function SuccessPage() {
+function SuccessContent() {
   const searchParams = useSearchParams();
   const plan = searchParams.get('plan') || 'free';
   const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
-    // Try to get user info from localStorage
-    const githubToken = localStorage.getItem('github_token');
-    if (githubToken) {
-      fetch('https://api.github.com/user', {
-        headers: { Authorization: `token ${githubToken}` },
-      })
-        .then(res => res.json())
-        .then(setUser)
-        .catch(console.error);
+    // Try to get user info from localStorage (browser only)
+    if (typeof window !== 'undefined') {
+      const githubToken = localStorage.getItem('github_token');
+      if (githubToken) {
+        fetch('https://api.github.com/user', {
+          headers: { Authorization: `token ${githubToken}` },
+        })
+          .then(res => res.json())
+          .then(setUser)
+          .catch(console.error);
+      }
     }
   }, []);
 
@@ -202,5 +204,20 @@ export default function SuccessPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SuccessPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#030305] text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block w-12 h-12 border-4 border-purple-500/30 border-t-purple-500 rounded-full animate-spin mb-4"></div>
+          <p className="text-gray-400">Loading...</p>
+        </div>
+      </div>
+    }>
+      <SuccessContent />
+    </Suspense>
   );
 }
