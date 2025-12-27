@@ -353,42 +353,8 @@ export default function Dashboard() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-         
-  {/* Connected Repositories */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6 }}
-          className="mt-8 bg-gray-900/50 backdrop-blur-sm border border-gray-800/50 rounded-xl p-6"
-        >
-          <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
-            <Github className="w-5 h-5" />
-            Connected Repositories
-          </h2>
+          
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {dashboardData?.installations && dashboardData.installations.length > 0 ? (
-              dashboardData.installations.map((installation, index) => (
-                <div key={index} className="p-4 bg-gray-800/30 rounded-lg border border-gray-700/50">
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="font-medium truncate">{installation.account?.login || 'Unknown'}</h3>
-                    <span className="text-xs bg-blue-500/20 text-blue-400 px-2 py-1 rounded">
-                      {installation.target_type === 'User' ? 'Personal' : 'Organization'}
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-400 mb-2">{installation.repository_selection === 'all' ? 'All repositories' : 'Selected repositories'}</p>
-                  <p className="text-xs text-gray-500">Installation ID: {installation.installation_id}</p>
-                </div>
-              ))
-            ) : (
-              <div className="col-span-full text-center py-8 text-gray-400">
-                <Github className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p>No repositories connected yet</p>
-                <p className="text-sm">Install PiPilot on GitHub to get started</p>
-              </div>
-            )}
-          </div>  
-        </motion.div>
           {/* How to Use PiPilot */}
           <motion.div
             initial={{ opacity: 0, x: 20 }}
@@ -464,8 +430,6 @@ export default function Dashboard() {
             </div>
           </motion.div>
         </div>
-
-      
       </div>
     </div>
   );

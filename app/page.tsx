@@ -455,7 +455,7 @@ export default function Home() {
             <Link href="#pricing" className="text-sm font-medium text-gray-400 hover:text-white transition-colors">Pricing</Link>
           </div>
 
-          <Link href="/setup">
+          <Link href="https://github.com/apps/pipilot-swe-agent">
             <button className="bg-white/5 hover:bg-white/10 border border-white/10 hover:border-purple-500/50 backdrop-blur-md px-6 py-2.5 rounded-full text-sm font-semibold text-white transition-all flex items-center gap-2 group">
               <span>Get Started</span>
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
@@ -504,7 +504,7 @@ export default function Home() {
 
             <Reveal delay={0.3}>
               <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-20">
-                <Link href="/setup">
+                <Link href="https://github.com/apps/pipilot-swe-agent">
                   <button className="relative px-8 py-4 bg-white text-black font-bold rounded-xl hover:scale-105 transition-transform duration-300 overflow-hidden group">
                     <div className="absolute inset-0 bg-gradient-to-r from-cyan-400 to-purple-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                     <span className="relative group-hover:text-white flex items-center gap-2">
@@ -1050,7 +1050,7 @@ export default function Home() {
                     </ul>
 
                     {/* CTA */}
-                    <Link href="/setup" className="block w-full">
+                    <Link href="https://github.com/apps/pipilot-swe-agent" className="block w-full">
                       <button
                         className={`w-full py-3 px-6 rounded-xl font-semibold transition-all duration-300 ${plan.popular
                             ? 'bg-gradient-to-r from-purple-600 to-cyan-600 text-white hover:shadow-lg hover:shadow-purple-500/25'
@@ -1065,16 +1065,6 @@ export default function Home() {
               ))}
             </div>
 
-            <Reveal delay={0.4}>
-              <div className="text-center mt-12">
-                <Link
-                  href="/setup"
-                  className="text-cyan-400 hover:text-cyan-300 transition-colors text-sm font-medium"
-                >
-                  View detailed pricing and plans →
-                </Link>
-              </div>
-            </Reveal>
           </div>
         </section>
 
@@ -1088,7 +1078,7 @@ export default function Home() {
               <p className="text-xl text-gray-400 mb-10">Join the revolution of autonomous software engineering.</p>
 
               <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                <Link href="/setup">
+                <Link href="https://github.com/apps/pipilot-swe-agent">
                   <button className="px-8 py-4 bg-white text-black font-bold rounded-full hover:bg-gray-200 transition-colors shadow-[0_0_40px_rgba(255,255,255,0.3)]">
                     Get Started for Free
                   </button>
